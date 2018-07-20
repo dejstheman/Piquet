@@ -1,5 +1,6 @@
 import random
 from copy import deepcopy
+from itertools import combinations
 
 from Deck import Deck
 from Hand import Hand
@@ -278,9 +279,12 @@ class Deal:
 
             if len(set(self.tricks_won.values())) > 1:
                 max_trick_winner = max(self.players, key=lambda p: self.tricks_won[p])
-                self.scores[max_trick_winner] += 10
+                self.deal_scores[max_trick_winner] += 10
                 if self.tricks_won[max_trick_winner] == 12:
-                    self.scores[max_trick_winner] += 40
+                    self.deal_scores[max_trick_winner] += 40
+
+            for p in self.players:
+                self.scores[p] += self.deal_scores[p]
         else:
             self.update_deal_score(trick_winner, 1)
 
@@ -288,3 +292,73 @@ class Deal:
             self.seen_cards[p] += [card for _, card in self.current_trick]
         self.current_trick = []
         self.player_to_play = trick_winner
+
+    def get_possible_moves(self):
+        if not self.no_of_discards[self.player_to_play]:
+            return self.get_possible_no_of_discards()
+        elif not self.discards[self.player_to_play]:
+            return self.get_possible_discards()
+        elif not self.exchanged[self.player_to_play]:
+            return ['exchange']
+        elif not all(self.declarations.values()):
+            return self.get_possible_declarations()
+        elif not self.younger_look_up_card and self.players.index(self.player_to_play) == 1:
+            return ['peep', 'pass']
+        else:
+            return self.get_possible_tricks()
+
+    def get_possible_no_of_discards(self):
+        return range(3, self.max_discards[self.player_to_play] + 1)
+
+    def get_possible_discards(self):
+        return list(combinations(Hand(self.hands[self.player_to_play]).get_discard_cards(7),
+                                 self.no_of_discards[self.player_to_play]))
+
+    def get_possible_declarations(self):
+        if self.players.index(self.player_to_play) == 0:
+            if not self.declarations['point']:
+                return ['point', 'pass']
+            elif not self.declarations['sequence']:
+                return ['sequence', 'pass']
+            elif not self.declarations['set']:
+                return ['set', 'pass']
+
+    def get_possible_tricks(self):
+        if not self.current_trick:
+            return self.hands[self.player_to_play]
+        else:
+            _, lead_card = self.current_trick[0]
+            cards_in_suit = [card for card in self.hands[self.player_to_play] if card.suit == lead_card.suit]
+            if cards_in_suit:
+                return cards_in_suit
+            else:
+                return self.hands[self.player_to_play]
+
+    def get_result(self, player):
+        return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
+
+    def __repr__(self):
+        result = ""
+        for p in self.players:
+            # hand = Hand(self.hands[p])
+            # result += "\n{} hand: {}\n".format(p, self.hands[p])
+            # result += "{} carte blanche: {}\n".format(p, self.carte_blanche[p])
+            # result += "{} discards: {}\n".format(p, self.discards[p])
+            # result += "{} seen cards: {}\n".format(p, self.seen_cards[p])
+            # result += "{} point: {} sequence: {} set: {}\n".format(
+            #     p, hand.points, hand.get_best_sequence(), hand.get_best_set())
+            result += "{} score: {}\n".format(p, self.scores[p])
+
+        return result
+
+
+if __name__ == "__main__":
+    players = ['ai', 'human']
+    scores = {p: 0 for p in players}
+
+    deal = Deal(players, scores)
+
+    while deal.get_possible_moves():
+        deal.do_move(deal.get_possible_moves()[0])
+
+    print(deal)
