@@ -2,6 +2,7 @@ import random
 from copy import deepcopy
 
 from Deck import Deck
+from Hand import Hand
 
 
 class Deal:
@@ -24,7 +25,7 @@ class Deal:
         self.younger_look_up_card = False
         self.declarations = {'point': False, 'sequence': False, 'set': False}
         self.declaration_values = {p: {'point': 0, 'sequence': 0, 'set': 0} for p in self.players}
-        self.repique_scored = {p: False for p in self.players}
+        self.repique_scored = False
         self.pique_scored = False
         self.current_trick = []
         self.max_tricks = 12
@@ -46,7 +47,8 @@ class Deal:
         state.younger_look_up_card = self.younger_look_up_card
         state.declarations = deepcopy(self.declarations)
         state.declaration_values = deepcopy(self.declaration_values)
-        state.repique_scored = deepcopy(self.repique_scored)
+        state.repique_scored = self.repique_scored
+        state.pique_scored = self.pique_scored
         state.current_trick = deepcopy(self.current_trick)
         state.tricks_in_round = self.tricks_in_round
         state.tricks_in_round = deepcopy(self.tricks_in_round)
@@ -80,48 +82,73 @@ class Deal:
     def get_next_player(self, player):
         return [p for p in self.players if p != player][0]
 
+    def do_move(self, move):
+        if any(x for x in self.carte_blanche.values()) and not self.discards[self.player_to_play]:
+            self.carte_blanche_discard(move)
+        elif not self.discards[self.player_to_play]:
+            self.default_discard(move)
+        elif not self.exchanged[self.player_to_play]:
+            self.exchange_cards()
+        elif not all(self.declarations.values()):
+            self.declare_stat(move)
+        elif not self.younger_look_up_card and self.players.index(self.player_to_play) == 1:
+            self.younger_peep(move)
+        elif self.hands[self.player_to_play]:
+            self.play_trick(move)
+
     def carte_blanche_discard(self, move):
         # if elder and carte blanche
         if self.players.index(self.player_to_play) == 0 and self.carte_blanche[self.player_to_play]:
-            # choose number of discards, but do not discard yet
+            # choose number of discards only, younger turn
             if not self.no_of_discards[self.player_to_play]:
                 self.deal_scores[self.player_to_play] += 10
                 self.no_of_discards[self.player_to_play] = move
                 self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
                 self.player_to_play = self.get_next_player(self.player_to_play)
-            # discard cards
+            # discard cards, show carte blanche
             elif self.discards[self.get_next_player(self.player_to_play)]:
                 self.seen_cards[self.get_next_player(self.player_to_play)] += self.hands[self.player_to_play]
                 self.discard_cards(move)
 
-        #
-        elif self.players.index(self.player_to_play) == 1 and self.carte_blanche[self.get_next_player(self.player_to_play)]:
+        # if younger and carte blanche
+        elif self.players.index(self.player_to_play) == 1 and \
+                self.carte_blanche[self.get_next_player(self.player_to_play)]:
+            # choose number of discards only
             if not self.no_of_discards[self.player_to_play]:
                 self.no_of_discards[self.player_to_play] = move
+            # discard cards, show carte blanche
             else:
+                self.seen_cards[self.get_next_player(self.player_to_play)] += self.hands[self.player_to_play]
                 self.discard_cards(move)
                 self.player_to_play = self.get_next_player(self.player_to_play)
 
-        elif self.players.index(self.player_to_play) == 0 and self.carte_blanche[self.get_next_player(self.player_to_play)]:
+        # if elder and younger carte blanche
+        elif self.players.index(self.player_to_play) == 0 and \
+                self.carte_blanche[self.get_next_player(self.player_to_play)]:
+            # choose number of discards
             if not self.no_of_discards[self.player_to_play]:
                 self.no_of_discards[self.player_to_play] = move
                 self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
+            # discard cards
             else:
                 self.discard_cards(move)
                 self.player_to_play = self.get_next_player(self.player_to_play)
 
+        # if younger and elder carte blanche
         elif self.players.index(self.player_to_play) == 1 and self.carte_blanche[self.player_to_play]:
+            # choose number of discards
             if not self.no_of_discards[self.player_to_play]:
                 self.no_of_discards[self.player_to_play] = move
+            # discard cards
             else:
-                self.seen_cards[self.get_next_player(self.player_to_play)] += self.hands[self.player_to_play]
                 self.discard_cards(move)
                 self.player_to_play = self.get_next_player(self.player_to_play)
 
     def default_discard(self, move):
         if not self.no_of_discards[self.player_to_play]:
             self.no_of_discards[self.player_to_play] = move
-            self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
+            if self.players.index(self.player_to_play) == 0:
+                self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
         else:
             self.discard_cards(move)
             self.player_to_play = self.get_next_player(self.player_to_play)
@@ -131,3 +158,133 @@ class Deal:
                                            if card not in discard_cards]
         self.discards[self.player_to_play] = list(discard_cards)
 
+    def exchange_cards(self):
+        self.hands[self.player_to_play] += self.talon[:self.no_of_discards[self.player_to_play]]
+        self.exchanged[self.player_to_play] = True
+        if self.players.index(self.player_to_play) == 0:
+            if self.no_of_discards[self.player_to_play] < 5:
+                self.seen_cards[self.player_to_play] += self.talon[self.no_of_discards[self.player_to_play]:5]
+        self.talon = self.talon[self.no_of_discards[self.player_to_play]:]
+        if len(self.talon) == 0:
+            self.younger_look_up_card = True
+        self.player_to_play = self.get_next_player(self.player_to_play)
+
+    def declare_stat(self, move):
+        if move == 'point':
+            self.declare_point()
+        elif move == 'sequence':
+            self.declare_sequence()
+        elif move == 'set':
+            self.declare_set()
+        else:
+            if not self.declarations['point']:
+                self.declarations['point'] = True
+            elif not self.declarations['sequence']:
+                self.declarations['sequence'] = True
+            else:
+                self.declarations['set'] = True
+
+    def declare_point(self):
+        elder = Hand(self.hands[self.player_to_play])
+        younger = Hand(self.hands[self.get_next_player(self.player_to_play)])
+
+        self.compare_declarations('point', elder.get_point_value(), elder.get_point_sum(),
+                                  younger.get_point_value(), younger.get_point_sum())
+        self.deal_scores[self.player_to_play] += self.declaration_values[self.player_to_play]['point']
+
+    def declare_sequence(self):
+        elder = Hand(self.hands[self.player_to_play])
+        younger = Hand(self.hands[self.get_next_player(self.player_to_play)])
+
+        self.compare_declarations('sequence', elder.get_sequence_value(), elder.get_sequence_rank(),
+                                  younger.get_sequence_value(), younger.get_sequence_rank())
+        self.deal_scores[self.player_to_play] += self.declaration_values[self.player_to_play]['sequence']
+        self.check_for_repique()
+
+    def declare_set(self):
+        elder = Hand(self.hands[self.player_to_play])
+        younger = Hand(self.hands[self.get_next_player(self.player_to_play)])
+
+        self.compare_declarations('set', elder.get_set_value(), elder.get_set_rank(),
+                                  younger.get_set_value(), younger.get_set_rank())
+        self.deal_scores[self.player_to_play] += self.declaration_values[self.player_to_play]['set']
+        self.check_for_repique()
+
+    def compare_declarations(self, stat, elder_value, elder_rank, younger_value, younger_rank):
+        if elder_value > younger_value:
+            self.declaration_values[self.player_to_play][stat] = elder_value
+        elif elder_value == younger_value:
+            if elder_rank > younger_rank:
+                self.declaration_values[self.player_to_play][stat] = elder_value
+            elif younger_rank > elder_rank:
+                self.declaration_values[self.get_next_player(self.player_to_play)][stat] = younger_value
+        else:
+            self.declaration_values[self.get_next_player(self.player_to_play)][stat] = younger_value
+        self.declarations[stat] = True
+
+    def update_deal_score(self, player, score):
+        self.deal_scores[player] += score
+        if not self.repique_scored and not self.pique_scored:
+            self.check_for_pique(player)
+
+    def check_for_repique(self):
+        for p in self.players:
+            player_declarations = sum(self.declaration_values[p].values())
+            opponent_declarations = sum(self.declaration_values[self.get_next_player(p)].values())
+            if ((player_declarations >= 20 and self.carte_blanche[p]) or player_declarations >= 30) and \
+                    opponent_declarations == 0 and not self.repique_scored:
+                self.deal_scores[p] += 60
+                self.repique_scored = True
+
+    def check_for_pique(self, player):
+        if self.deal_scores[player] >= 30 and \
+                self.deal_scores[self.get_next_player(player)] == 0:
+            self.deal_scores[player] += 30
+            self.pique_scored = True
+
+    def younger_peep(self, move):
+        if move == 'peep':
+            for p in self.players:
+                self.seen_cards[p] += self.talon
+        self.younger_look_up_card = True
+
+    def play_trick(self, move):
+        if self.tricks_in_round == 12 and self.players.index(self.player_to_play) == 1:
+            if self.carte_blanche[self.player_to_play]:
+                self.update_deal_score(self.player_to_play, 10)
+            self.update_deal_score(self.player_to_play, sum(self.declaration_values[self.player_to_play].values()))
+
+        if not self.current_trick:
+            self.update_deal_score(self.player_to_play, 1)
+        self.current_trick.append((self.player_to_play, move))
+        self.hands[self.player_to_play].remove(move)
+        self.player_to_play = self.get_next_player(self.player_to_play)
+
+        if any(True for player, _ in self.current_trick if player == self.player_to_play):
+            self.compute_trick_winner()
+
+    def compute_trick_winner(self):
+        self.tricks_in_round -= 1
+        _, lead_card = self.current_trick[0]
+
+        sorted_plays = sorted([(player, card.rank) for (player, card) in self.current_trick
+                               if card.suit == lead_card.suit], key=lambda trick: trick[1], reverse=True)
+
+        trick_winner = sorted_plays[0][0]
+        self.tricks_won[trick_winner] += 1
+
+        if self.tricks_in_round == 0:
+            self.update_deal_score(trick_winner, 2)
+
+            if len(set(self.tricks_won.values())) > 1:
+                max_trick_winner = max(self.players, key=lambda p: self.tricks_won[p])
+                self.scores[max_trick_winner] += 10
+                if self.tricks_won[max_trick_winner] == 12:
+                    self.scores[max_trick_winner] += 40
+        else:
+            self.update_deal_score(trick_winner, 1)
+
+        for p in self.players:
+            self.seen_cards[p] += [card for _, card in self.current_trick]
+        self.current_trick = []
+        self.player_to_play = trick_winner
