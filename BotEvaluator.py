@@ -18,18 +18,19 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_vs_kbs_bot(bot_name, db, games, time_resource, explorations):
-    players = [bot_name, 'kbs']
-    db['table_name'] = '{}_vs_kbs_bot'.format(bot_name)
-    scores = {p: 0 for p in players}
-    partie = create_partie(players, scores)
+def evaluate_vs_bot(bots, db, games, time_resource, explorations):
+    db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
+    scores = {p: 0 for p in bots}
+    partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(bot_partie)(bot_name, partie, db, time_resource, explorations)
+        delayed(bot_partie)(bots, partie, db, time_resource, explorations)
         for partie in create_sample_games(partie, games))
-    db['table_name'] += '_stats'
+    conn = create_connection(db['file'])
+    with conn:
+        create_stats_table(conn, bots)
 
 
-def bot_partie(bot_name, partie, db, time_resource, explorations):
+def bot_partie(bots, partie, db, time_resource, explorations):
     for e in explorations:
         current = deepcopy(partie)
         for deal in current:
@@ -40,10 +41,10 @@ def bot_partie(bot_name, partie, db, time_resource, explorations):
                     deal.do_move(deal_ismcts(
                         root_state=deal, time_resource=time_resource, exploration=e, result_type=deal.player_to_play))
         scores = current[0].scores
-        values = (time_resource, e, scores[bot_name], scores['kbs'])
+        values = (time_resource, e, scores[bots[0]], scores[bots[1]])
         conn = create_connection(db['file'])
         with conn:
-            create_table(conn, db['table_name'], bot_name)
+            create_table(conn, db['table_name'], bots)
             update_table(conn, db['table_name'], values)
 
 
@@ -55,9 +56,9 @@ def create_connection(db_file):
         print(e)
 
 
-def create_table(conn, table_name, bot_name):
-    sql = '''create table if not exists {} (time REAL, exploration REAL, {} INTEGER, kbs INTEGER);'''\
-        .format(table_name, bot_name)
+def create_table(conn, table_name, bots):
+    sql = '''create table if not exists {} (time REAL, exploration REAL, {} INTEGER, {} INTEGER);'''\
+        .format(table_name, bots[0], bots[1])
     try:
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -74,9 +75,9 @@ def update_table(conn, table_name, data):
         print(e)
 
 
-def create_stats_table(conn, bot_name):
+def create_stats_table(conn, bots):
     with open('data/get_stats_from_table.txt') as file:
-        statements = file.read().format(bot_name).split(';')
+        statements = file.read().format(bots[0], bots[1]).split(';')
 
     try:
         cursor = conn.cursor()
@@ -88,14 +89,14 @@ def create_stats_table(conn, bot_name):
 
 
 if __name__ == "__main__":
-    # games = 250
-    # time_resource = 0.5
-    # explorations = [1/sqrt(2)]
-    # db = {'file': 'data/evaluator_stats.db'}
-    bot_name = 'absolute_result'
+    games = 150
+    time_resource = 0.5
+    explorations = [0.1, 0.2, 0.3]
+    db = {'file': 'data/evaluator_stats.db'}
+    bot_names = ['score_strength', 'kbs']
+    # bot_names = ['absolute_result', 'score_strength']
 
-    # evaluate_vs_kbs_bot(bot_name, db, games, time_resource, explorations)
+    # for bot in bot_names:
+    #     evaluate_vs_kbs_bot(bot, db, games, time_resource, explorations)
 
-    conn = sqlite3.connect('data/evaluator_stats.db')
-    with conn:
-        create_stats_table(conn, bot_name)
+    evaluate_vs_bot(bot_names, db, games, time_resource, explorations)

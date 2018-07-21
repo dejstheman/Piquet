@@ -335,20 +335,42 @@ class Deal:
             else:
                 return self.hands[self.player_to_play]
 
+    def get_maximum_possible_score(self, player):
+        declaration_values = sum(self.declaration_values[player].values())
+        maximum = 0
+        if self.players.index(player) == 0:
+            maximum += 10 if self.carte_blanche[player] else 0
+            maximum += declaration_values + 135 if maximum + declaration_values >= 30 \
+                else declaration_values + 105
+        else:
+            maximum += declaration_values + 114 if self.carte_blanche[player] \
+                else declaration_values + 104
+
+        return maximum
+
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
+
+    def get_score_strength(self, player):
+        return 1.0 * self.deal_scores[player] / self.get_maximum_possible_score(player) \
+            if self.deal_scores[player] > self.scores[self.get_next_player(player)] else 0
+
+    def get_opponent_score_strength(self, player):
+        return 1 - (1.0 * self.deal_scores[self.get_next_player(player)] /
+                    self.get_maximum_possible_score(self.get_next_player(player))) \
+            if self.deal_scores[player] > self.deal_scores[self.get_next_player(player)] else 0
 
     def __repr__(self):
         result = ""
         for p in self.players:
-            # hand = Hand(self.hands[p])
             # result += "\n{} hand: {}\n".format(p, self.hands[p])
             # result += "{} carte blanche: {}\n".format(p, self.carte_blanche[p])
             # result += "{} discards: {}\n".format(p, self.discards[p])
             # result += "{} seen cards: {}\n".format(p, self.seen_cards[p])
-            # result += "{} point: {} sequence: {} set: {}\n".format(
-            #     p, hand.points, hand.get_best_sequence(), hand.get_best_set())
+            for stat in self.declaration_values[p]:
+                result += '{} {}: {}\n'.format(p, stat, self.declaration_values[p][stat])
             result += "{} score: {}\n".format(p, self.scores[p])
+            result += "{} maximum possible score: {}\n\n".format(p, self.get_maximum_possible_score(p))
 
         return result
 
@@ -357,19 +379,14 @@ if __name__ == "__main__":
     players = ['ai', 'human']
     scores = {p: 0 for p in players}
 
-    ai_wins = 0
+    deal = Deal(players, scores)
 
-    for i in range(100):
-        deal = Deal(players, deepcopy(scores))
+    while deal.get_possible_moves():
+        if deal.player_to_play == 'ai':
+            deal.do_move(deal_ismcts(deal, 0.5, result_type='score_strength'))
+        else:
+            deal.do_move(random.choice(deal.get_possible_moves()))
 
-        while deal.get_possible_moves():
-            if deal.player_to_play == 'ai':
-                deal.do_move(deal_ismcts(root_state=deal, time_resource=1))
-            else:
-                deal.do_move(random.choice(deal.get_possible_moves()))
-        if deal.scores['ai'] > deal.scores['human']:
-            ai_wins += 1
+    print(deal)
 
-        players = players[::-1]
-
-    print(ai_wins)
+    print(deal.get_score_strength('ai'))
