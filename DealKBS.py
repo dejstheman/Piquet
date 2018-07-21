@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from Deal import Deal
 from DealISMCTS import deal_ismcts
 from Hand import Hand
@@ -80,15 +82,22 @@ def play_trick(state):
 
 
 if __name__ == "__main__":
-    players = ['ai', 'greedy'][::-1]
+    players = ['ai', 'greedy']
     scores = {p: 0 for p in players}
 
-    deal = Deal(players, scores)
+    ai_wins = 0
 
-    while deal.get_possible_moves():
-        if deal.player_to_play == 'ai':
-            deal.do_move(deal_ismcts(deal, 0.5))
-        else:
-            deal.do_move(deal_kbs(deal))
+    for i in range(100):
+        deal = Deal(players, deepcopy(scores))
 
-    print(deal)
+        while deal.get_possible_moves():
+            if deal.player_to_play == 'ai':
+                deal.do_move(deal_ismcts(root_state=deal, time_resource=1))
+            else:
+                deal.do_move(deal_kbs(deal))
+        if deal.scores['ai'] > deal.scores['greedy']:
+            ai_wins += 1
+
+        players = players[::-1]
+
+    print(ai_wins)

@@ -335,7 +335,7 @@ class Deal:
             else:
                 return self.hands[self.player_to_play]
 
-    def get_result(self, player):
+    def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
 
     def __repr__(self):
@@ -364,7 +364,7 @@ if __name__ == "__main__":
 
         while deal.get_possible_moves():
             if deal.player_to_play == 'ai':
-                deal.do_move(deal_ismcts(deal, 1))
+                deal.do_move(deal_ismcts(root_state=deal, time_resource=1))
             else:
                 deal.do_move(random.choice(deal.get_possible_moves()))
         if deal.scores['ai'] > deal.scores['human']:

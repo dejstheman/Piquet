@@ -4,7 +4,7 @@ import time
 from DealNode import DealNode
 
 
-def deal_ismcts(root_state, time_resource, exploration=None):
+def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolute_result"):
     root_node = DealNode() if exploration is None else DealNode(exploration=exploration)
     timeout = time.time() + time_resource
 
@@ -28,7 +28,7 @@ def deal_ismcts(root_state, time_resource, exploration=None):
             state.do_move(random.choice(state.get_possible_moves()))
 
         while node is not None:
-            node.update(state)
+            node.update(state, result_type)
             node = node.parent_node
 
         if time.time() > timeout:

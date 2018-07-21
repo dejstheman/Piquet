@@ -30,7 +30,8 @@ class DealNode:
         self.child_nodes.append(node)
         return node
 
-    def update(self, terminal_state):
+    def update(self, terminal_state, update_type):
         self.visits += 1
         if self.player_just_played is not None:
-            self.wins += terminal_state.get_result(self.player_just_played)
+            if update_type == "absolute_result":
+                self.wins += terminal_state.get_absolute_result(self.player_just_played)
