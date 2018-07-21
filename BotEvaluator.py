@@ -26,6 +26,7 @@ def evaluate_vs_kbs_bot(bot_name, db, games, time_resource, explorations):
     Parallel(n_jobs=multiprocessing.cpu_count())(
         delayed(bot_partie)(bot_name, partie, db, time_resource, explorations)
         for partie in create_sample_games(partie, games))
+    db['table_name'] += '_stats'
 
 
 def bot_partie(bot_name, partie, db, time_resource, explorations):
@@ -73,11 +74,28 @@ def update_table(conn, table_name, data):
         print(e)
 
 
+def create_stats_table(conn, bot_name):
+    with open('data/get_stats_from_table.txt') as file:
+        statements = file.read().format(bot_name).split(';')
+
+    try:
+        cursor = conn.cursor()
+        for s in statements:
+            sql = '''{}'''.format(s.strip())
+            cursor.execute(sql)
+    except sqlite3.Error as e:
+        print(e)
+
+
 if __name__ == "__main__":
-    games = 250
-    time_resource = 0.5
-    explorations = [1/sqrt(2)]
-    db = {'file': 'data/evaluator_stats.db'}
+    # games = 250
+    # time_resource = 0.5
+    # explorations = [1/sqrt(2)]
+    # db = {'file': 'data/evaluator_stats.db'}
     bot_name = 'absolute_result'
 
-    evaluate_vs_kbs_bot(bot_name, db, games, time_resource, explorations)
+    # evaluate_vs_kbs_bot(bot_name, db, games, time_resource, explorations)
+
+    conn = sqlite3.connect('data/evaluator_stats.db')
+    with conn:
+        create_stats_table(conn, bot_name)
