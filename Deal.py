@@ -30,6 +30,7 @@ class Deal:
         self.repique_scored = False
         self.pique_scored = False
         self.current_trick = []
+        self.public_cards = []
         self.max_tricks = 12
         self.tricks_in_round = 12
         self.tricks_won = {p: 0 for p in self.players}
@@ -52,6 +53,7 @@ class Deal:
         state.repique_scored = self.repique_scored
         state.pique_scored = self.pique_scored
         state.current_trick = deepcopy(self.current_trick)
+        state.public_cards = deepcopy(self.public_cards)
         state.tricks_in_round = self.tricks_in_round
         state.tricks_in_round = deepcopy(self.tricks_in_round)
 
@@ -61,7 +63,7 @@ class Deal:
         state = self.clone()
 
         seen_cards = state.hands[observer] + state.seen_cards[observer] + state.discards[observer] + \
-                     [card for _, card in state.current_trick]
+                     state.public_cards + [card for _, card in state.current_trick]
 
         unseen_cards = [card for card in Deck().cards if card not in seen_cards]
         random.shuffle(unseen_cards)
@@ -109,7 +111,7 @@ class Deal:
                 self.player_to_play = self.get_next_player(self.player_to_play)
             # discard cards, show carte blanche
             elif self.discards[self.get_next_player(self.player_to_play)]:
-                self.seen_cards[self.get_next_player(self.player_to_play)] += self.hands[self.player_to_play]
+                self.public_cards += self.hands[self.player_to_play]
                 self.discard_cards(move)
 
         # if younger and carte blanche
@@ -120,7 +122,7 @@ class Deal:
                 self.no_of_discards[self.player_to_play] = move
             # discard cards, show carte blanche
             else:
-                self.seen_cards[self.get_next_player(self.player_to_play)] += self.hands[self.player_to_play]
+                self.public_cards += self.hands[self.player_to_play]
                 self.discard_cards(move)
                 self.player_to_play = self.get_next_player(self.player_to_play)
 
@@ -158,7 +160,7 @@ class Deal:
     def discard_cards(self, discard_cards):
         self.hands[self.player_to_play] = [card for card in self.hands[self.player_to_play]
                                            if card not in discard_cards]
-        self.discards[self.player_to_play] = list(discard_cards)
+        self.discards[self.player_to_play] = [card for card in discard_cards if card not in self.public_cards]
 
     def exchange_cards(self):
         self.hands[self.player_to_play] += self.talon[:self.no_of_discards[self.player_to_play]]
@@ -246,8 +248,7 @@ class Deal:
 
     def younger_peep(self, move):
         if move == 'peep':
-            for p in self.players:
-                self.seen_cards[p] += self.talon
+            self.public_cards += self.talon
         self.younger_look_up_card = True
 
     def play_trick(self, move):
@@ -289,8 +290,7 @@ class Deal:
         else:
             self.update_deal_score(trick_winner, 1)
 
-        for p in self.players:
-            self.seen_cards[p] += [card for _, card in self.current_trick]
+        self.public_cards += [card for _, card in self.current_trick]
         self.current_trick = []
         self.player_to_play = trick_winner
 
@@ -364,7 +364,7 @@ if __name__ == "__main__":
 
         while deal.get_possible_moves():
             if deal.player_to_play == 'ai':
-                deal.do_move(deal_ismcts(deal, 0.5))
+                deal.do_move(deal_ismcts(deal, 1))
             else:
                 deal.do_move(random.choice(deal.get_possible_moves()))
         if deal.scores['ai'] > deal.scores['human']:
