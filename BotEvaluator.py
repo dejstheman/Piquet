@@ -1,4 +1,5 @@
 import multiprocessing
+import random
 import sqlite3
 from copy import deepcopy
 from math import sqrt
@@ -18,7 +19,7 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_vs_bot(bots, db, games, time_resource, explorations):
+def evaluate_bots(bots, db, games, time_resource, explorations):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
     partie = create_partie(bots, scores)
@@ -37,6 +38,8 @@ def bot_partie(bots, partie, db, time_resource, explorations):
             while deal.get_possible_moves():
                 if deal.player_to_play == 'kbs':
                     deal.do_move(deal_kbs(deal))
+                elif deal.player_to_play == 'random':
+                    deal.do_move(random.choice(deal.get_possible_moves()))
                 else:
                     deal.do_move(deal_ismcts(
                         root_state=deal, time_resource=time_resource, exploration=e, result_type=deal.player_to_play))
@@ -89,14 +92,15 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 150
-    time_resource = 0.5
-    explorations = [0.1, 0.2, 0.3]
+    games = 100
+    time_resource = 1
+    explorations = [1/sqrt(2), .1, .2, .3, .4, .5, .6, .8, .9, 1, 2, 5, 7, 10, 25, 20, 25]
     db = {'file': 'data/evaluator_stats.db'}
-    bot_names = ['score_strength', 'kbs']
+    bot_names = ['opponent_score_strength', 'kbs']
     # bot_names = ['absolute_result', 'score_strength']
 
     # for bot in bot_names:
     #     evaluate_vs_kbs_bot(bot, db, games, time_resource, explorations)
 
-    evaluate_vs_bot(bot_names, db, games, time_resource, explorations)
+    evaluate_bots(bot_names, db, games, time_resource, explorations)
+    # evaluate_bots(['opponent_score_strength', 'absolute_result'], db, 250, .5, [1/sqrt(2)])

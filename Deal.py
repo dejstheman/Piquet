@@ -6,7 +6,7 @@ from DealISMCTS import deal_ismcts
 from Deck import Deck
 from Hand import Hand
 
-
+# improve randomised opponent hand when cloning to reflect the information from declaration
 class Deal:
 
     def __init__(self, players, scores):
@@ -383,7 +383,7 @@ if __name__ == "__main__":
 
     while deal.get_possible_moves():
         if deal.player_to_play == 'ai':
-            deal.do_move(deal_ismcts(deal, 0.5, result_type='score_strength'))
+            deal.do_move(deal_ismcts(deal, 1, result_type='score_strength'))
         else:
             deal.do_move(random.choice(deal.get_possible_moves()))
 
