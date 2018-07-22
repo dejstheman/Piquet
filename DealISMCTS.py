@@ -1,16 +1,16 @@
 import random
-import time
 
 from DealNode import DealNode
 
 
-def deal_ismcts(root_state, iter_max, exploration=None, result_type="absolute_result"):
+def deal_ismcts(root_state, iter_max, discard_strategy, exploration=None, result_type="absolute_result"):
     root_node = DealNode() if exploration is None else DealNode(exploration=exploration)
 
     for i in range(iter_max):
         node = root_node
 
         state = root_state.clone_and_randomise(root_state.player_to_play)
+        state.discard_strategy = discard_strategy
 
         while state.get_possible_moves() and not node.get_untried_moves(state.get_possible_moves()):
             node = node.ucb_select_child(state.get_possible_moves())

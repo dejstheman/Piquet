@@ -1,6 +1,7 @@
 import multiprocessing
 import random
 import sqlite3
+import time
 from copy import deepcopy
 from math import sqrt
 
@@ -11,28 +12,27 @@ from DealISMCTS import deal_ismcts
 from DealKBS import deal_kbs
 
 
-def create_partie(players, scores, discard_strategy):
-    return [DealState(players, scores, discard_strategy)
-            if x % 2 == 0 else DealState(players[::-1], scores, discard_strategy) for x in range(6)]
+def create_partie(players, scores):
+    return [DealState(players, scores) if x % 2 == 0 else DealState(players[::-1], scores) for x in range(6)]
 
 
 def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots(bots, discard_strategy, db, games, iter_max, explorations):
+def evaluate_bots(bots, discard_strategies, db, games, iter_max, explorations):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
-    partie = create_partie(bots, scores, discard_strategy)
+    partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(bot_partie)(bots, partie, db, iter_max, explorations)
+        delayed(bot_partie)(bots, discard_strategies, partie, db, iter_max, explorations)
         for partie in create_sample_games(partie, games))
     conn = create_connection(db['file'])
     with conn:
         create_stats_table(conn, bots)
 
 
-def bot_partie(bots, partie, db, iter_max, explorations):
+def bot_partie(bots, discard_strategies, partie, db, iter_max, explorations):
     for e in explorations:
         current = deepcopy(partie)
         for deal in current:
@@ -43,7 +43,8 @@ def bot_partie(bots, partie, db, iter_max, explorations):
                     deal.do_move(random.choice(deal.get_possible_moves()))
                 else:
                     deal.do_move(deal_ismcts(
-                        root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play))
+                        root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play,
+                        discard_strategy=discard_strategies[bots.index(deal.player_to_play)]))
         scores = current[0].scores
         values = (iter_max, e, scores[bots[0]], scores[bots[1]])
         conn = create_connection(db['file'])
@@ -93,19 +94,13 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 8
+    games = 92
     explorations = [1/sqrt(2)]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
-    bot_names = ['absolute_result_set', 'random']
 
-    evaluate_bots(bots=bot_names, discard_strategy='set', db=db, games=games,
-                  iter_max=iter_max, explorations=explorations)
+    start = time.time()
+    bot_names = ['absolute_result_set', 'absolute_result_point']
+    discard_strategies = ['set', 'point']
 
-    bot_names = ['absolute_result_point', 'random']
-    evaluate_bots(bots=bot_names, discard_strategy='point', db=db, games=games,
-                  iter_max=iter_max, explorations=explorations)
-
-    bot_names = ['absolute_result_greedy', 'random']
-    evaluate_bots(bots=bot_names, discard_strategy='greedy', db=db, games=games,
-                  iter_max=iter_max, explorations=explorations)
+    evaluate_bots(bot_names, discard_strategies, db, games, iter_max, explorations)

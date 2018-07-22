@@ -9,14 +9,14 @@ from DealKBS import deal_kbs
 from Deck import Deck
 from Hand import Hand
 
-# TODO improve randomised opponent hand when cloning to reflect the information from declaration
+
 class DealState:
 
-    def __init__(self, players, scores, discard_strategy):
+    def __init__(self, players, scores):
         self.players = players
         self.player_to_play = self.players[0]
         self.scores = scores
-        self.discard_strategy = discard_strategy
+        self.discard_strategy = ''
         self.deal_scores = {p: 0 for p in self.players}
         deck = Deck()
         self.hands = {p: deck.cards[12 * self.players.index(p):12 * (self.players.index(p) + 1)] for p in self.players}
@@ -40,7 +40,7 @@ class DealState:
         self.tricks_won = {p: 0 for p in self.players}
 
     def clone(self):
-        state = DealState(deepcopy(self.players), deepcopy(self.scores), self.discard_strategy)
+        state = DealState(deepcopy(self.players), deepcopy(self.scores))
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
@@ -72,18 +72,18 @@ class DealState:
         unseen_cards = [card for card in Deck().cards if card not in seen_cards]
         random.shuffle(unseen_cards)
 
-        if not self.exchanged[observer] or not self.exchanged[self.get_next_player(observer)]:
-            talon_length = len(self.talon)
+        if not state.exchanged[observer] or not state.exchanged[state.get_next_player(observer)]:
+            talon_length = len(state.talon)
             state.talon = unseen_cards[:talon_length]
             unseen_cards = unseen_cards[talon_length:]
 
-        seen_cards_length = len(self.seen_cards[self.get_next_player(observer)])
-        discards_length = len(self.discards[self.get_next_player(observer)]) + seen_cards_length
-        hand_length = len(self.hands[self.get_next_player(observer)]) + discards_length
+        seen_cards_length = len(state.seen_cards[state.get_next_player(observer)])
+        discards_length = len(state.discards[state.get_next_player(observer)]) + seen_cards_length
+        hand_length = len(state.hands[state.get_next_player(observer)]) + discards_length
 
-        state.seen_cards[self.get_next_player(observer)] = unseen_cards[:seen_cards_length]
-        state.discards[self.get_next_player(observer)] = unseen_cards[seen_cards_length:discards_length]
-        state.hands[self.get_next_player(observer)] = unseen_cards[discards_length:hand_length]
+        state.seen_cards[state.get_next_player(observer)] = unseen_cards[:seen_cards_length]
+        state.discards[state.get_next_player(observer)] = unseen_cards[seen_cards_length:discards_length]
+        state.hands[state.get_next_player(observer)] = unseen_cards[discards_length:hand_length]
 
         return state
 
@@ -324,7 +324,7 @@ class DealState:
         elif self.discard_strategy == 'point':
             return list(combinations(HandStatistics.compute_point_discard(hand, 8, hand_type),
                                      self.no_of_discards[self.player_to_play]))
-        elif self.discard_strategy == 'greedy':
+        else:
             return list(combinations(HandStatistics.compute_greedy_discard(
                 hand, self.max_discards[self.player_to_play]), self.no_of_discards[self.player_to_play]))
 
@@ -392,12 +392,14 @@ if __name__ == "__main__":
     players = ['absolute_result', 'human']
     scores = {p: 0 for p in players}
 
-    deal = DealState(players, scores, 'set')
+    deal = DealState(players, scores)
 
+    start = time.time()
     while deal.get_possible_moves():
         if deal.player_to_play == 'absolute_result':
-            deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play))
+            deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, discard_strategy='set'))
         else:
             deal.do_move(deal_kbs(deal))
+    print(time.time() - start)
 
     print(deal)
