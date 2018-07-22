@@ -85,7 +85,7 @@ class DealState:
         return state
 
     def get_next_player(self, player):
-        return [p for p in self.players if p != player][0]
+        return self.players[1] if self.players.index(player) == 0 else self.players[0]
 
     def do_move(self, move):
         if any(x for x in self.carte_blanche.values()) and not self.discards[self.player_to_play]:

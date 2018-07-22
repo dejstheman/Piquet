@@ -92,10 +92,10 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 2500
+    games = 500
     explorations = [1/sqrt(2)]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
-    bot_names = ['absolute_result', 'kbs']
+    bot_names = ['absolute_result', 'random']
 
     evaluate_bots(bots=bot_names, db=db, games=games, iter_max=iter_max, explorations=explorations)

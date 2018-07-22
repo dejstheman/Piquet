@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS {0}_vs_{1}_bot_stats;
 
 CREATE TABLE {0}_vs_{1}_bot_stats
              (
-                                                 time REAL,
+                                                 iter_max REAL,
                           exploration            REAL,
                           average_{0}_score      REAL,
                           average_{1}_score      REAL,
@@ -12,7 +12,7 @@ CREATE TABLE {0}_vs_{1}_bot_stats
              );
 
 INSERT INTO {0}_vs_{1}_bot_stats
-SELECT average.time,
+SELECT average.iter_max,
        average.exploration,
        average_{0}_score,
        average_{1}_score,
@@ -20,53 +20,53 @@ SELECT average.time,
        IFNULL({0}_rubicon_scores * 100.0 / total_games, 0) AS {0}_rubicon_percentage,
        IFNULL({1}_rubicon_scores * 100.0 / total_games, 0) AS {1}_rubicon_percentage
 FROM   (
-                SELECT   time,
+                SELECT   iter_max,
                          exploration,
                          avg({0}) AS average_{0}_score,
                          avg({1}) AS average_{1}_score
                 FROM     {0}_vs_{1}_bot
-                GROUP BY time,
+                GROUP BY iter_max,
                          exploration) AS average
 LEFT JOIN
        (
-                SELECT   time,
+                SELECT   iter_max,
                          exploration,
                          count({0}) AS {0}_wins
                 FROM     {0}_vs_{1}_bot
                 WHERE    {0} > {1}
-                GROUP BY time,
+                GROUP BY iter_max,
                          exploration) AS {0}_wins
-ON     average.time = {0}_wins.time
+ON     average.iter_max = {0}_wins.iter_max
 AND    average.exploration = {0}_wins.exploration
 LEFT JOIN
        (
-                SELECT   time,
+                SELECT   iter_max,
                          exploration,
                          count({0}) AS {0}_rubicon_scores
                 FROM     {0}_vs_{1}_bot
                 WHERE    {0} >= 100
-                GROUP BY time,
+                GROUP BY iter_max,
                          exploration) AS {0}_rubicon
-ON     average.time = {0}_rubicon.time
+ON     average.iter_max = {0}_rubicon.iter_max
 AND    average.exploration = {0}_rubicon.exploration
 LEFT JOIN
        (
-                SELECT   time,
+                SELECT   iter_max,
                          exploration,
                          count({1}) AS {1}_rubicon_scores
                 FROM     {0}_vs_{1}_bot
                 WHERE    {1} >= 100
-                GROUP BY time,
+                GROUP BY iter_max,
                          exploration) AS {1}_rubicon
-ON     average.time = {1}_rubicon.time
+ON     average.iter_max = {1}_rubicon.iter_max
 AND    average.exploration = {1}_rubicon.exploration
 LEFT JOIN
        (
-                SELECT   time,
+                SELECT   iter_max,
                          exploration,
                          count(*) AS total_games
                 FROM     {0}_vs_{1}_bot
-                GROUP BY time,
+                GROUP BY iter_max,
                          exploration) AS games
-ON     average.time = games.time
+ON     average.iter_max = games.iter_max
 AND    average.exploration = games.exploration;
