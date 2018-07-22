@@ -4,11 +4,10 @@ import time
 from DealNode import DealNode
 
 
-def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolute_result"):
+def deal_ismcts(root_state, iter_max, exploration=None, result_type="absolute_result"):
     root_node = DealNode() if exploration is None else DealNode(exploration=exploration)
-    timeout = time.time() + time_resource
 
-    while True:
+    for i in range(iter_max):
         node = root_node
 
         state = root_state.clone_and_randomise(root_state.player_to_play)
@@ -30,8 +29,5 @@ def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolu
         while node is not None:
             node.update(state, result_type)
             node = node.parent_node
-
-        if time.time() > timeout:
-            break
 
     return max(root_node.child_nodes, key=lambda child: child.visits).move

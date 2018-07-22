@@ -1,4 +1,5 @@
 import random
+import time
 from copy import deepcopy
 from itertools import combinations
 
@@ -7,7 +8,7 @@ from Deck import Deck
 from Hand import Hand
 
 # improve randomised opponent hand when cloning to reflect the information from declaration
-class Deal:
+class DealState:
 
     def __init__(self, players, scores):
         self.players = players
@@ -36,7 +37,7 @@ class Deal:
         self.tricks_won = {p: 0 for p in self.players}
 
     def clone(self):
-        state = Deal(deepcopy(self.players), deepcopy(self.scores))
+        state = DealState(deepcopy(self.players), deepcopy(self.scores))
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
@@ -309,7 +310,7 @@ class Deal:
             return self.get_possible_tricks()
 
     def get_possible_no_of_discards(self):
-        return range(3, self.max_discards[self.player_to_play] + 1)
+        return range(self.max_discards[self.player_to_play], self.max_discards[self.player_to_play] + 1)
 
     def get_possible_discards(self):
         return list(combinations(Hand(self.hands[self.player_to_play]).get_discard_cards(7),
@@ -379,14 +380,12 @@ if __name__ == "__main__":
     players = ['ai', 'human']
     scores = {p: 0 for p in players}
 
-    deal = Deal(players, scores)
+    deal = DealState(players, scores)
 
     while deal.get_possible_moves():
         if deal.player_to_play == 'ai':
-            deal.do_move(deal_ismcts(deal, 1, result_type='score_strength'))
+            deal.do_move(deal_ismcts(deal, 1000, result_type='score_strength'))
         else:
             deal.do_move(random.choice(deal.get_possible_moves()))
 
     print(deal)
-
-    print(deal.get_score_strength('ai'))

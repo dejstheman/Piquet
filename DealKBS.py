@@ -1,10 +1,6 @@
-from copy import deepcopy
-
-from Deal import Deal
-from DealISMCTS import deal_ismcts
 from Hand import Hand
 
-
+# TODO update discard strategy
 def deal_kbs(state):
     if any(x for x in state.carte_blanche.values()) and not state.discards[state.player_to_play]:
         return carte_blanche_discard(state)
@@ -79,25 +75,3 @@ def play_trick(state):
             return sorted(cards_in_suit)[-1]
         else:
             return sorted(hand)[0]
-
-
-if __name__ == "__main__":
-    players = ['ai', 'greedy']
-    scores = {p: 0 for p in players}
-
-    ai_wins = 0
-
-    for i in range(100):
-        deal = Deal(players, deepcopy(scores))
-
-        while deal.get_possible_moves():
-            if deal.player_to_play == 'ai':
-                deal.do_move(deal_ismcts(root_state=deal, time_resource=1))
-            else:
-                deal.do_move(deal_kbs(deal))
-        if deal.scores['ai'] > deal.scores['greedy']:
-            ai_wins += 1
-
-        players = players[::-1]
-
-    print(ai_wins)

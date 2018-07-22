@@ -7,6 +7,7 @@ CREATE TABLE {0}_vs_{1}_bot_stats
                           average_{0}_score      REAL,
                           average_{1}_score      REAL,
                           {0}_win_percentage     REAL,
+                          {0}_rubicon_percentage REAL,
                           {1}_rubicon_percentage REAL
              );
 
@@ -16,6 +17,7 @@ SELECT average.time,
        average_{0}_score,
        average_{1}_score,
        IFNULL({0}_wins           * 100.0 / total_games, 0) AS {0}_win_percentage,
+       IFNULL({0}_rubicon_scores * 100.0 / total_games, 0) AS {0}_rubicon_percentage,
        IFNULL({1}_rubicon_scores * 100.0 / total_games, 0) AS {1}_rubicon_percentage
 FROM   (
                 SELECT   time,
@@ -36,6 +38,17 @@ LEFT JOIN
                          exploration) AS {0}_wins
 ON     average.time = {0}_wins.time
 AND    average.exploration = {0}_wins.exploration
+LEFT JOIN
+       (
+                SELECT   time,
+                         exploration,
+                         count({0}) AS {0}_rubicon_scores
+                FROM     {0}_vs_{1}_bot
+                WHERE    {0} >= 100
+                GROUP BY time,
+                         exploration) AS {0}_rubicon
+ON     average.time = {0}_rubicon.time
+AND    average.exploration = {0}_rubicon.exploration
 LEFT JOIN
        (
                 SELECT   time,
