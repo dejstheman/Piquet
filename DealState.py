@@ -3,17 +3,20 @@ import time
 from copy import deepcopy
 from itertools import combinations
 
+import HandStatistics
 from DealISMCTS import deal_ismcts
+from DealKBS import deal_kbs
 from Deck import Deck
 from Hand import Hand
 
 # TODO improve randomised opponent hand when cloning to reflect the information from declaration
 class DealState:
 
-    def __init__(self, players, scores):
+    def __init__(self, players, scores, discard_strategy):
         self.players = players
         self.player_to_play = self.players[0]
         self.scores = scores
+        self.discard_strategy = discard_strategy
         self.deal_scores = {p: 0 for p in self.players}
         deck = Deck()
         self.hands = {p: deck.cards[12 * self.players.index(p):12 * (self.players.index(p) + 1)] for p in self.players}
@@ -37,7 +40,7 @@ class DealState:
         self.tricks_won = {p: 0 for p in self.players}
 
     def clone(self):
-        state = DealState(deepcopy(self.players), deepcopy(self.scores))
+        state = DealState(deepcopy(self.players), deepcopy(self.scores), self.discard_strategy)
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
@@ -313,8 +316,17 @@ class DealState:
         return range(self.max_discards[self.player_to_play], self.max_discards[self.player_to_play] + 1)
 
     def get_possible_discards(self):
-        return list(combinations(Hand(self.hands[self.player_to_play]).get_discard_cards(7),
-                                 self.no_of_discards[self.player_to_play]))
+        hand = Hand(self.hands[self.player_to_play])
+        hand_type = self.players.index(self.player_to_play)
+        if self.discard_strategy == 'set':
+            return list(combinations(HandStatistics.compute_set_discard(hand, 8, hand_type),
+                                     self.no_of_discards[self.player_to_play]))
+        elif self.discard_strategy == 'point':
+            return list(combinations(HandStatistics.compute_point_discard(hand, 8, hand_type),
+                                     self.no_of_discards[self.player_to_play]))
+        elif self.discard_strategy == 'greedy':
+            return list(combinations(HandStatistics.compute_greedy_discard(
+                hand, self.max_discards[self.player_to_play]), self.no_of_discards[self.player_to_play]))
 
     def get_possible_declarations(self):
         if self.players.index(self.player_to_play) == 0:
@@ -377,15 +389,15 @@ class DealState:
 
 
 if __name__ == "__main__":
-    players = ['ai', 'human']
+    players = ['absolute_result', 'human']
     scores = {p: 0 for p in players}
 
-    deal = DealState(players, scores)
+    deal = DealState(players, scores, 'set')
 
     while deal.get_possible_moves():
-        if deal.player_to_play == 'ai':
-            deal.do_move(deal_ismcts(deal, 1000, result_type='score_strength'))
+        if deal.player_to_play == 'absolute_result':
+            deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play))
         else:
-            deal.do_move(random.choice(deal.get_possible_moves()))
+            deal.do_move(deal_kbs(deal))
 
     print(deal)

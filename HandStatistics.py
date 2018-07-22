@@ -98,6 +98,7 @@ def compute_best_group(groups):
 
 
 def compute_set_discard(hand, n, hand_type):
+    n = 12 - n
     high_cards = [card for card in hand.cards if card.rank in range(6, 8)] if hand_type == 1 \
         else [card for card in hand.cards if card.rank == 8]
     set_point = sorted([card for card in hand.get_best_set() if card in hand.points])
@@ -128,6 +129,7 @@ def compute_set_discard(hand, n, hand_type):
 
 
 def compute_point_discard(hand, n, hand_type):
+    n = 12 - n
     high_cards = [card for card in hand.cards if card.rank in range(6, 8)] if hand_type == 1 \
         else [card for card in hand.cards if card.rank == 8]
     point_set = sorted([card for card in hand.points if card in hand.get_best_set()])
@@ -154,4 +156,8 @@ def compute_point_discard(hand, n, hand_type):
             untouchables.append(remaining_cards.pop(-1))
 
     return [card for card in hand.cards if card not in untouchables]
+
+
+def compute_greedy_discard(hand, n):
+    return sorted(hand.cards)[:n]
 

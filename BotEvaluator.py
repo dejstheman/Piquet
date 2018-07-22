@@ -11,18 +11,19 @@ from DealISMCTS import deal_ismcts
 from DealKBS import deal_kbs
 
 
-def create_partie(players, scores):
-    return [DealState(players, scores) if x % 2 == 0 else DealState(players[::-1], scores) for x in range(6)]
+def create_partie(players, scores, discard_strategy):
+    return [DealState(players, scores, discard_strategy)
+            if x % 2 == 0 else DealState(players[::-1], scores, discard_strategy) for x in range(6)]
 
 
 def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots(bots, db, games, iter_max, explorations):
+def evaluate_bots(bots, discard_strategy, db, games, iter_max, explorations):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
-    partie = create_partie(bots, scores)
+    partie = create_partie(bots, scores, discard_strategy)
     Parallel(n_jobs=multiprocessing.cpu_count())(
         delayed(bot_partie)(bots, partie, db, iter_max, explorations)
         for partie in create_sample_games(partie, games))
@@ -92,10 +93,19 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 500
+    games = 8
     explorations = [1/sqrt(2)]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
-    bot_names = ['absolute_result', 'random']
+    bot_names = ['absolute_result_set', 'random']
 
-    evaluate_bots(bots=bot_names, db=db, games=games, iter_max=iter_max, explorations=explorations)
+    evaluate_bots(bots=bot_names, discard_strategy='set', db=db, games=games,
+                  iter_max=iter_max, explorations=explorations)
+
+    bot_names = ['absolute_result_point', 'random']
+    evaluate_bots(bots=bot_names, discard_strategy='point', db=db, games=games,
+                  iter_max=iter_max, explorations=explorations)
+
+    bot_names = ['absolute_result_greedy', 'random']
+    evaluate_bots(bots=bot_names, discard_strategy='greedy', db=db, games=games,
+                  iter_max=iter_max, explorations=explorations)

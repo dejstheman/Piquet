@@ -1,3 +1,4 @@
+import HandStatistics
 from Hand import Hand
 
 # TODO update discard strategy
@@ -21,34 +22,39 @@ def carte_blanche_discard(state):
         if not state.no_of_discards[state.player_to_play]:
             return state.max_discards[state.player_to_play]
         elif state.discards[state.get_next_player(state.player_to_play)]:
-            return Hand(state.hands[state.player_to_play]).get_discard_cards(state.max_discards[state.player_to_play])
+            hand = Hand(state.hands[state.player_to_play])
+            return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
     elif state.players.index(state.player_to_play) == 1 and \
             state.carte_blanche[state.get_next_player(state.player_to_play)]:
         if not state.no_of_discards[state.player_to_play]:
             return state.max_discards[state.player_to_play]
         else:
-            return Hand(state.hands[state.player_to_play]).get_discard_cards(state.max_discards[state.player_to_play])
+            hand = Hand(state.hands[state.player_to_play])
+            return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
     elif state.players.index(state.player_to_play) == 0 and \
             state.carte_blanche[state.get_next_player(state.player_to_play)]:
         if not state.no_of_discards[state.player_to_play]:
             return state.max_discards[state.player_to_play]
         else:
-            return Hand(state.hands[state.player_to_play]).get_discard_cards(state.max_discards[state.player_to_play])
+            hand = Hand(state.hands[state.player_to_play])
+            return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
     elif state.players.index(state.player_to_play) == 1 and state.carte_blanche[state.player_to_play]:
         if not state.no_of_discards[state.player_to_play]:
             return state.max_discards[state.player_to_play]
         else:
-            return Hand(state.hands[state.player_to_play]).get_discard_cards(state.max_discards[state.player_to_play])
+            hand = Hand(state.hands[state.player_to_play])
+            return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
 
 def default_discard(state):
     if not state.no_of_discards[state.player_to_play]:
         return state.max_discards[state.player_to_play]
     else:
-        return Hand(state.hands[state.player_to_play]).get_discard_cards(state.max_discards[state.player_to_play])
+        hand = Hand(state.hands[state.player_to_play])
+        return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
 
 def exchange_cards(state):
