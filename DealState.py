@@ -7,7 +7,7 @@ from DealISMCTS import deal_ismcts
 from Deck import Deck
 from Hand import Hand
 
-# improve randomised opponent hand when cloning to reflect the information from declaration
+# TODO improve randomised opponent hand when cloning to reflect the information from declaration
 class DealState:
 
     def __init__(self, players, scores):

@@ -4,6 +4,8 @@ import HandStatistics
 from Card import Card
 from Deck import Deck
 from Hand import Hand
+from HandWithPointDiscard import HandWithPointDiscard
+from HandWithSetDiscard import HandWithSetDiscard
 
 
 def get_opponent_maximum_point(hand):
@@ -49,7 +51,12 @@ if __name__ == "__main__":
     cards.append(Card(7, 'S'))
     cards.append(Card(3, 'S'))
     cards.append(Card(6, 'S'))
-    # hand = Hand(cards)
-    hand = Hand(Deck().cards[:12])
-    print(get_opponent_maximum_point(hand))
-    print(hand.get_elder_discard_cards(4))
+
+    # cards = Deck().cards[:12]
+
+    hand = Hand(cards)
+    hand2 = HandWithSetDiscard(cards)
+    hand3 = HandWithPointDiscard(cards)
+    print(hand3.get_discard_cards(4, 'elder'))
+    print(HandStatistics.compute_point_discard(hand3, 4, 0))
+    print(hand2.get_discard_cards(4, 'elder'))
