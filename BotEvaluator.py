@@ -96,14 +96,29 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 92
+    games = 100
     explorations = [1/sqrt(2)]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
 
-    start = time.time()
-    bot_names = ['absolute_result_set', 'absolute_result_point']
-    discard_strategies = ['set', 'point']
-    histories = [False, False]
+    bot_names = []
+    bot_names.append(['rubicon_result_point', 'absolute_result_greedy'])
+    bot_names.append(['rubicon_result_point', 'absolute_result_set'])
+    bot_names.append(['rubicon_result_point', 'absolute_result_point'])
+    bot_names.append(['rubicon_result_set', 'absolute_result_greedy'])
+    bot_names.append(['rubicon_result_set', 'absolute_result_set'])
+    bot_names.append(['rubicon_result_set', 'absolute_result_point'])
+    bot_names.append(['rubicon_result_set', 'rubicon_result_point'])
+    discard_strategies = []
+    discard_strategies.append(['point', 'greedy'])
+    discard_strategies.append(['point', 'set'])
+    discard_strategies.append(['point', 'point'])
+    discard_strategies.append(['set', 'greedy'])
+    discard_strategies.append(['set', 'set'])
+    discard_strategies.append(['set', 'point'])
+    discard_strategies.append(['set', 'point'])
+    histories = [[False, False]] * 7
 
-    evaluate_bots(bot_names, discard_strategies, histories, db, games, iter_max, explorations)
+    for i in range(len(bot_names)):
+        evaluate_bots(bot_names[i], discard_strategies[i], histories[i], db, games, iter_max, explorations)
+        # print(bot_names[i], discard_strategies[i], histories[i])

@@ -42,7 +42,7 @@ class DealState:
         self.opponent_cards = {p: [] for p in self.players}
 
     def clone(self):
-        state = DealState(deepcopy(self.players), deepcopy(self.scores), self.history)
+        state = DealState(deepcopy(self.players), deepcopy(self.scores))
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
@@ -376,6 +376,11 @@ class DealState:
         elif self.discard_strategy == 'point':
             return list(combinations(HandStatistics.compute_point_discard(hand, 8, hand_type),
                                      self.no_of_discards[self.player_to_play]))
+        elif self.discard_strategy == 'set_point':
+            return list(combinations(HandStatistics.compute_set_discard(hand, 8, hand_type),
+                                     self.no_of_discards[self.player_to_play])) + \
+                   list(combinations(HandStatistics.compute_point_discard(hand, 8, hand_type),
+                                     self.no_of_discards[self.player_to_play]))
         else:
             return list(combinations(HandStatistics.compute_greedy_discard(
                 hand, self.max_discards[self.player_to_play]), self.no_of_discards[self.player_to_play]))
@@ -416,14 +421,9 @@ class DealState:
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
 
-    def get_score_strength(self, player):
-        return 1.0 * self.deal_scores[player] / self.get_maximum_possible_score(player) \
-            if self.deal_scores[player] > self.scores[self.get_next_player(player)] else 0
-
-    def get_opponent_score_strength(self, player):
-        return 1 - (1.0 * self.deal_scores[self.get_next_player(player)] /
-                    self.get_maximum_possible_score(self.get_next_player(player))) \
-            if self.deal_scores[player] > self.deal_scores[self.get_next_player(player)] else 0
+    def get_rubicon_result(self, player):
+        return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] \
+                    or self.deal_scores[self.get_next_player(player)] >= 100/6.0 else 1
 
     def __repr__(self):
         result = ""
@@ -441,15 +441,15 @@ class DealState:
 
 
 if __name__ == "__main__":
-    players = ['absolute_result', 'human']
+    players = ['rubicon_result', 'human']
     scores = {p: 0 for p in players}
 
     deal = DealState(players, scores)
 
     start = time.time()
     while deal.get_possible_moves():
-        if deal.player_to_play == 'absolute_result':
-            deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, discard_strategy='set'))
+        if deal.player_to_play == 'rubicon_result':
+            deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play, discard_strategy='set', history=False))
         else:
             deal.do_move(deal_kbs(deal))
     print(time.time() - start)
