@@ -20,19 +20,19 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots(bots, discard_strategies, db, games, iter_max, explorations):
+def evaluate_bots(bots, discard_strategies, histories, db, games, iter_max, explorations):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
     partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(bot_partie)(bots, discard_strategies, partie, db, iter_max, explorations)
+        delayed(bot_partie)(bots, discard_strategies, histories, partie, db, iter_max, explorations)
         for partie in create_sample_games(partie, games))
     conn = create_connection(db['file'])
     with conn:
         create_stats_table(conn, bots)
 
 
-def bot_partie(bots, discard_strategies, partie, db, iter_max, explorations):
+def bot_partie(bots, discard_strategies, histories, partie, db, iter_max, explorations):
     for e in explorations:
         current = deepcopy(partie)
         for deal in current:
@@ -42,9 +42,11 @@ def bot_partie(bots, discard_strategies, partie, db, iter_max, explorations):
                 elif deal.player_to_play == 'random':
                     deal.do_move(random.choice(deal.get_possible_moves()))
                 else:
+                    discard = discard_strategies[bots.index(deal.player_to_play)]
+                    history = histories[bots.index(deal.player_to_play)]
                     deal.do_move(deal_ismcts(
                         root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play,
-                        discard_strategy=discard_strategies[bots.index(deal.player_to_play)]))
+                        discard_strategy=discard, history=history))
         scores = current[0].scores
         values = (iter_max, e, scores[bots[0]], scores[bots[1]])
         conn = create_connection(db['file'])
@@ -102,5 +104,6 @@ if __name__ == "__main__":
     start = time.time()
     bot_names = ['absolute_result_set', 'absolute_result_point']
     discard_strategies = ['set', 'point']
+    histories = [False, False]
 
-    evaluate_bots(bot_names, discard_strategies, db, games, iter_max, explorations)
+    evaluate_bots(bot_names, discard_strategies, histories, db, games, iter_max, explorations)

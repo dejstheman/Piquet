@@ -16,6 +16,7 @@ class DealState:
         self.players = players
         self.player_to_play = self.players[0]
         self.scores = scores
+        self.history = False
         self.discard_strategy = ''
         self.deal_scores = {p: 0 for p in self.players}
         deck = Deck()
@@ -38,9 +39,10 @@ class DealState:
         self.max_tricks = 12
         self.tricks_in_round = 12
         self.tricks_won = {p: 0 for p in self.players}
+        self.opponent_cards = {p: [] for p in self.players}
 
     def clone(self):
-        state = DealState(deepcopy(self.players), deepcopy(self.scores))
+        state = DealState(deepcopy(self.players), deepcopy(self.scores), self.history)
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
@@ -66,26 +68,73 @@ class DealState:
     def clone_and_randomise(self, observer):
         state = self.clone()
 
-        seen_cards = state.hands[observer] + state.seen_cards[observer] + state.discards[observer] + \
-                     state.public_cards + [card for _, card in state.current_trick]
+        seen_cards = state.hands[observer] + state.seen_cards[observer] + state.discards[
+            observer] + state.public_cards + state.opponent_cards[observer] + [card for _, card in state.current_trick]
 
         unseen_cards = [card for card in Deck().cards if card not in seen_cards]
-        random.shuffle(unseen_cards)
+        opponent = state.get_next_player(observer)
+        hand_length = len(state.hands[opponent])
 
-        if not state.exchanged[observer] or not state.exchanged[state.get_next_player(observer)]:
+        if self.history:
+            if state.declarations['point'] and not state.declarations['sequence'] and not state.declarations['set']:
+                while True:
+                    temp = random.sample(unseen_cards, hand_length)
+                    hand = Hand(state.opponent_cards[observer] + temp)
+                    target = [state.declaration_values[opponent]['point']]
+                    sample = [hand.get_point_value()]
+                    if state.check_sample_hand(target, sample):
+                        unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
+                                                                     unseen_cards=unseen_cards)
+                        break
+            elif state.declarations['point'] and state.declarations['sequence'] and not state.declarations['set']:
+                while True:
+                    temp = random.sample(unseen_cards, hand_length)
+                    hand = Hand(state.opponent_cards[observer] + temp)
+                    stats = ['point', 'sequence']
+                    target = [state.declaration_values[opponent][stat] for stat in stats]
+                    sample = [hand.get_point_value(), hand.get_sequence_value()]
+                    if state.check_sample_hand(target, sample):
+                        unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
+                                                                     unseen_cards=unseen_cards)
+                        break
+            elif state.declarations['point'] and state.declarations['sequence'] and state.declarations['set']:
+                while True:
+                    temp = random.sample(unseen_cards, hand_length)
+                    hand = Hand(state.opponent_cards[observer] + temp)
+                    stats = ['point', 'sequence', 'set']
+                    target = [state.declaration_values[opponent][stat] for stat in stats]
+                    sample = [hand.get_point_value(), hand.get_sequence_value(), hand.get_set_value()]
+                    if state.check_sample_hand(target, sample):
+                        unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
+                                                                     unseen_cards=unseen_cards)
+                        break
+            else:
+                state.hands[opponent] = unseen_cards[:hand_length]
+                unseen_cards = unseen_cards[hand_length:]
+        else:
+            state.hands[opponent] = unseen_cards[:hand_length]
+            unseen_cards = unseen_cards[hand_length:]
+
+        if not state.exchanged[observer] or not state.exchanged[opponent]:
             talon_length = len(state.talon)
             state.talon = unseen_cards[:talon_length]
-            unseen_cards = unseen_cards[talon_length:]
+            unseen_cards = [card for card in unseen_cards if card not in state.talon]
 
-        seen_cards_length = len(state.seen_cards[state.get_next_player(observer)])
-        discards_length = len(state.discards[state.get_next_player(observer)]) + seen_cards_length
-        hand_length = len(state.hands[state.get_next_player(observer)]) + discards_length
+        seen_cards_length = len(state.seen_cards[opponent])
+        discards_length = len(state.discards[opponent]) + seen_cards_length
 
-        state.seen_cards[state.get_next_player(observer)] = unseen_cards[:seen_cards_length]
-        state.discards[state.get_next_player(observer)] = unseen_cards[seen_cards_length:discards_length]
-        state.hands[state.get_next_player(observer)] = unseen_cards[discards_length:hand_length]
+        state.seen_cards[opponent] = unseen_cards[:seen_cards_length]
+        state.discards[opponent] = unseen_cards[seen_cards_length:discards_length]
 
         return state
+
+    # noinspection PyMethodMayBeStatic
+    def check_sample_hand(self, target, sample):
+        return all(j == i for i, j in list(zip(target, sample)) if i > 0)
+
+    def remove_hand_from_unseen(self, player, hand, unseen_cards):
+        self.hands[player] = hand
+        return [card for card in unseen_cards if card not in hand]
 
     def get_next_player(self, player):
         return self.players[1] if self.players.index(player) == 0 else self.players[0]
@@ -295,6 +344,9 @@ class DealState:
             self.update_deal_score(trick_winner, 1)
 
         self.public_cards += [card for _, card in self.current_trick]
+        for p in self.players:
+            self.opponent_cards[p] += \
+                [card for player, card in self.current_trick if player == self.get_next_player(p)]
         self.current_trick = []
         self.player_to_play = trick_winner
 

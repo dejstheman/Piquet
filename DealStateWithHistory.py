@@ -11,8 +11,8 @@ from Hand import Hand
 
 class DealStateWithHistory(DealState):
 
-    def __init__(self, players, scores):
-        super().__init__(players, scores)
+    def __init__(self, players, scores, history):
+        super().__init__(players, scores, history)
         self.opponent_cards = {p: [] for p in self.players}
 
     def clone(self):
