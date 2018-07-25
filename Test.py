@@ -38,6 +38,6 @@ if __name__ == "__main__":
     # hand = Hand(cards)
     # print(get_opponent_maximum_point(hand))
 
-    for x in range(1, 13):
-        print(x, len(list(combinations(range(17), x))))
+    lst = []
+    print(lst[1000:])
 

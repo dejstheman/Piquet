@@ -1,11 +1,8 @@
 import random
-import time
 from copy import deepcopy
 from itertools import combinations
 
 import HandStatistics
-from DealISMCTS import deal_ismcts
-from DealKBS import deal_kbs
 from Deck import Deck
 from Hand import Hand
 
@@ -14,7 +11,7 @@ def check_sample_hand(target, sample):
     return all(j == i for i, j in list(zip(target, sample)) if i > 0)
 
 
-class DealState:
+class Deal:
 
     def __init__(self, players, scores):
         self.players = players
@@ -26,10 +23,14 @@ class DealState:
         self.talon = [card for card in deck.cards if card not in [x for hand in self.hands.values() for x in hand]]
         self.carte_blanche = {p: all(x not in {card.rank for card in self.hands[p]}
                                      for x in range(5, 8)) for p in self.players}
+        self.carte_blanche_cards = []
         self.max_discards = {self.players[0]: 5, self.players[1]: 3}
         self.no_of_discards = {p: 0 for p in self.players}
         self.discards = {p: [] for p in self.players}
-        self.peeped_cards = {p: [] for p in self.players}
+        self.peeped_cards = []
+        self.cards_not_in_play = []
+        self.known_opponent_cards = {p: [] for p in self.players}
+        self.played_cards = {p: [] for p in self.players}
         self.exchanged = {p: False for p in self.players}
         self.younger_look_up_card = False
         self.declarations = {'point': False, 'sequence': False, 'set': False}
@@ -37,23 +38,25 @@ class DealState:
         self.repique_scored = False
         self.pique_scored = False
         self.current_trick = []
-        self.public_cards = []
         self.max_tricks = 12
         self.tricks_in_round = 12
         self.tricks_won = {p: 0 for p in self.players}
-        self.opponent_cards = {p: [] for p in self.players}
 
     def clone(self):
-        state = DealState(deepcopy(self.players), deepcopy(self.scores))
+        state = Deal(deepcopy(self.players), deepcopy(self.scores))
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)
         state.talon = deepcopy(self.talon)
         state.carte_blanche = deepcopy(self.carte_blanche)
+        state.carte_blanche_cards = deepcopy(self.carte_blanche_cards)
         state.max_discards = deepcopy(self.max_discards)
         state.no_of_discards = deepcopy(self.no_of_discards)
         state.discards = deepcopy(self.discards)
         state.peeped_cards = deepcopy(self.peeped_cards)
+        state.cards_not_in_play = deepcopy(self.cards_not_in_play)
+        state.known_opponent_cards = deepcopy(self.known_opponent_cards)
+        state.played_cards = deepcopy(self.played_cards)
         state.exchanged = deepcopy(self.exchanged)
         state.younger_look_up_card = self.younger_look_up_card
         state.declarations = deepcopy(self.declarations)
@@ -61,7 +64,6 @@ class DealState:
         state.repique_scored = self.repique_scored
         state.pique_scored = self.pique_scored
         state.current_trick = deepcopy(self.current_trick)
-        state.public_cards = deepcopy(self.public_cards)
         state.tricks_in_round = self.tricks_in_round
         state.tricks_won = deepcopy(self.tricks_won)
 
@@ -69,95 +71,70 @@ class DealState:
 
     def clone_and_randomise(self, observer):
         state = self.clone()
+        opponent = self.get_next_player(observer)
 
-        seen_cards = state.hands[observer] + state.peeped_cards[observer] + state.discards[
-            observer] + state.public_cards + state.opponent_cards[observer] + [card for _, card in state.current_trick]
+        impossible_cards = state.hands[observer] + state.discards[observer]
+        impossible_cards += state.played_cards[observer] + state.known_opponent_cards[observer]
+        impossible_cards += [card for _, card in state.current_trick]
 
-        unseen_cards = [card for card in Deck().cards if card not in seen_cards]
-        opponent = state.get_next_player(observer)
-        hand_length = len(state.hands[opponent])
+        possible_cards = [card for card in Deck().cards if card
+                          not in impossible_cards + state.known_opponent_cards[opponent]]
+
+        definite_cards = state.known_opponent_cards[opponent] + state.peeped_cards \
+            if observer == self.players[0] else state.known_opponent_cards[opponent]
+
+        hand_length = len(state.hands[opponent]) - len(state.peeped_cards) \
+            if observer == self.players[0] else len(state.hands[opponent])
 
         if state.declarations['point'] and not state.declarations['sequence'] and not state.declarations['set']:
-            # while True:
-            #     temp = random.sample(unseen_cards, hand_length)
-            #     hand = Hand(state.opponent_cards[observer] + temp)
-            #     target = [state.declaration_values[opponent]['point']]
-            #     sample = [hand.get_point_value()]
-            #     if check_sample_hand(target, sample):
-            #         unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
-            #                                                      unseen_cards=unseen_cards)
-            #         break
             valid_cards = []
             target = [state.declaration_values[opponent]['point']]
-            for cards in combinations(unseen_cards, hand_length):
-                hand = Hand(state.opponent_cards[observer] + list(cards))
+            for cards in combinations(possible_cards, hand_length):
+                hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(cards)
-            unseen_cards = state.remove_hand_from_unseen(
-                player=opponent, hand=random.choice(valid_cards), unseen_cards=unseen_cards)
+                    valid_cards.append(list(cards))
+            possible_cards = state.remove_cards_from_unseen(
+                player=opponent, cards=random.choice(valid_cards), possible_cards=possible_cards)
         elif state.declarations['point'] and state.declarations['sequence'] and not state.declarations['set']:
-            # while True:
-            #     temp = random.sample(unseen_cards, hand_length)
-            #     hand = Hand(state.opponent_cards[observer] + temp)
-            #     stats = ['point', 'sequence']
-            #     target = [state.declaration_values[opponent][stat] for stat in stats]
-            #     sample = [hand.get_point_value(), hand.get_sequence_value()]
-            #     if check_sample_hand(target, sample):
-            #         unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
-            #                                                      unseen_cards=unseen_cards)
-            #         break
             valid_cards = []
             stats = ['point', 'sequence']
             target = [state.declaration_values[opponent][stat] for stat in stats]
-            for cards in combinations(unseen_cards, hand_length):
-                hand = Hand(state.opponent_cards[observer] + list(cards))
+            for cards in combinations(possible_cards, hand_length):
+                hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value(), hand.get_sequence_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(cards)
-            unseen_cards = state.remove_hand_from_unseen(
-                player=opponent, hand=random.choice(valid_cards), unseen_cards=unseen_cards)
+                    valid_cards.append(list(cards))
+            possible_cards = state.remove_cards_from_unseen(
+                player=opponent, cards=random.choice(valid_cards), possible_cards=possible_cards)
         elif state.declarations['point'] and state.declarations['sequence'] and state.declarations['set']:
-            # while True:
-            #     temp = random.sample(unseen_cards, hand_length)
-            #     hand = Hand(state.opponent_cards[observer] + temp)
-            #     stats = ['point', 'sequence', 'set']
-            #     target = [state.declaration_values[opponent][stat] for stat in stats]
-            #     sample = [hand.get_point_value(), hand.get_sequence_value(), hand.get_set_value()]
-            #     if check_sample_hand(target, sample):
-            #         unseen_cards = state.remove_hand_from_unseen(player=opponent, hand=temp,
-            #                                                      unseen_cards=unseen_cards)
-            #         break
             valid_cards = []
             stats = ['point', 'sequence', 'set']
             target = [state.declaration_values[opponent][stat] for stat in stats]
-            for cards in combinations(unseen_cards, hand_length):
-                hand = Hand(state.opponent_cards[observer] + list(cards))
+            for cards in combinations(possible_cards, hand_length):
+                hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value(), hand.get_sequence_value(), hand.get_set_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(cards)
-            unseen_cards = state.remove_hand_from_unseen(
-                player=opponent, hand=random.choice(valid_cards), unseen_cards=unseen_cards)
+                    valid_cards.append(list(cards))
+            possible_cards = state.remove_cards_from_unseen(
+                player=opponent, cards=random.choice(valid_cards), possible_cards=possible_cards)
         else:
-            state.hands[opponent] = unseen_cards[:hand_length]
-            unseen_cards = unseen_cards[hand_length:]
+            state.hands[opponent] = state.peeped_cards + possible_cards[:hand_length]
+            possible_cards = possible_cards[hand_length:]
 
         if not state.exchanged[observer] or not state.exchanged[opponent]:
             talon_length = len(state.talon)
-            state.talon = unseen_cards[:talon_length]
-            unseen_cards = [card for card in unseen_cards if card not in state.talon]
+            state.talon = possible_cards[:talon_length]
+            possible_cards = possible_cards[talon_length:]
 
-        seen_cards_length = len(state.peeped_cards[opponent])
-        discards_length = len(state.discards[opponent]) + seen_cards_length
-
-        state.peeped_cards[opponent] = unseen_cards[:seen_cards_length]
-        state.discards[opponent] = unseen_cards[seen_cards_length:discards_length]
+        discards_length = len(state.discards[opponent])
+        state.discards[opponent] = possible_cards[:discards_length]
 
         return state
 
-    def remove_hand_from_unseen(self, player, hand, unseen_cards):
-        self.hands[player] = list(hand)
-        return [card for card in unseen_cards if card not in hand]
+    def remove_cards_from_unseen(self, player, cards, possible_cards):
+        self.hands[player] = cards
+        return [card for card in possible_cards if card not in cards]
 
     def get_next_player(self, player):
         return self.players[1] if self.players.index(player) == 0 else self.players[0]
@@ -187,32 +164,32 @@ class DealState:
                 self.player_to_play = self.get_next_player(self.player_to_play)
             # discard cards, show carte blanche
             elif self.discards[self.get_next_player(self.player_to_play)]:
-                self.public_cards += self.hands[self.player_to_play]
+                self.carte_blanche_cards += self.hands[self.player_to_play]
                 self.discard_cards(move)
 
         # if younger and carte blanche
         elif self.players.index(self.player_to_play) == 1 and \
                 self.carte_blanche[self.get_next_player(self.player_to_play)]:
-            # choose number of discards only
-            if not self.no_of_discards[self.player_to_play]:
-                self.no_of_discards[self.player_to_play] = move
-            # discard cards, show carte blanche
-            else:
-                self.public_cards += self.hands[self.player_to_play]
-                self.discard_cards(move)
-                self.player_to_play = self.get_next_player(self.player_to_play)
+                # choose number of discards only
+                if not self.no_of_discards[self.player_to_play]:
+                    self.no_of_discards[self.player_to_play] = move
+                # discard cards, show carte blanche
+                else:
+                    self.carte_blanche_cards += self.hands[self.player_to_play]
+                    self.discard_cards(move)
+                    self.player_to_play = self.get_next_player(self.player_to_play)
 
         # if elder and younger carte blanche
         elif self.players.index(self.player_to_play) == 0 and \
                 self.carte_blanche[self.get_next_player(self.player_to_play)]:
-            # choose number of discards
-            if not self.no_of_discards[self.player_to_play]:
-                self.no_of_discards[self.player_to_play] = move
-                self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
-            # discard cards
-            else:
-                self.discard_cards(move)
-                self.player_to_play = self.get_next_player(self.player_to_play)
+                # choose number of discards
+                if not self.no_of_discards[self.player_to_play]:
+                    self.no_of_discards[self.player_to_play] = move
+                    self.max_discards[self.get_next_player(self.player_to_play)] = 8 - move
+                # discard cards
+                else:
+                    self.discard_cards(move)
+                    self.player_to_play = self.get_next_player(self.player_to_play)
 
         # if younger and elder carte blanche
         elif self.players.index(self.player_to_play) == 1 and self.carte_blanche[self.player_to_play]:
@@ -236,14 +213,14 @@ class DealState:
     def discard_cards(self, discard_cards):
         self.hands[self.player_to_play] = [card for card in self.hands[self.player_to_play]
                                            if card not in discard_cards]
-        self.discards[self.player_to_play] = [card for card in discard_cards if card not in self.public_cards]
+        self.discards[self.player_to_play] = discard_cards
 
     def exchange_cards(self):
         self.hands[self.player_to_play] += self.talon[:self.no_of_discards[self.player_to_play]]
         self.exchanged[self.player_to_play] = True
         if self.players.index(self.player_to_play) == 0:
             if self.no_of_discards[self.player_to_play] < 5:
-                self.peeped_cards[self.player_to_play] += self.talon[self.no_of_discards[self.player_to_play]:5]
+                self.peeped_cards += self.talon[self.no_of_discards[self.player_to_play]:5]
         self.talon = self.talon[self.no_of_discards[self.player_to_play]:]
         if len(self.talon) == 0:
             self.younger_look_up_card = True
@@ -324,7 +301,7 @@ class DealState:
 
     def younger_peep(self, move):
         if move == 'peep':
-            self.public_cards += self.talon
+            self.cards_not_in_play += self.talon
         self.younger_look_up_card = True
 
     def play_trick(self, move):
@@ -366,10 +343,10 @@ class DealState:
         else:
             self.update_deal_score(trick_winner, 1)
 
-        self.public_cards += [card for _, card in self.current_trick]
         for p in self.players:
-            self.opponent_cards[p] += \
-                [card for player, card in self.current_trick if player == self.get_next_player(p)]
+            self.known_opponent_cards[p] += [
+                card for player, card in self.current_trick if player == self.get_next_player(p)]
+            self.played_cards[p] += [card for player, card in self.current_trick if player == p]
         self.current_trick = []
         self.player_to_play = trick_winner
 
@@ -450,19 +427,3 @@ class DealState:
 
         return result
 
-
-if __name__ == "__main__":
-    players = ['score_strength', 'human']
-    scores = {p: 0 for p in players}
-
-    deal = DealState(players, scores)
-
-    start = time.time()
-    while deal.get_possible_moves():
-        if deal.player_to_play == 'score_strength':
-            deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play))
-        else:
-            deal.do_move(deal_kbs(deal))
-    print(time.time() - start)
-
-    print(deal)

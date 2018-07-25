@@ -21,14 +21,6 @@ def compute_point(hand):
     return point
 
 
-def compute_opponent_maximum_point(hand, suit=None):
-    remaining_cards = hand.get_remaining_cards()
-    points = {s: len([card for card in remaining_cards if card.suit == s])
-              for s in {card.suit for card in remaining_cards}}
-    print(points)
-    return points[max(points, key=points.get)] if suit is None else points[suit]
-
-
 def compute_sequences(hand):
     sequences = []
     for suit in {card.suit for card in hand.cards}:
@@ -40,46 +32,11 @@ def compute_sequences(hand):
     return sequences
 
 
-def compute_opponent_maximum_sequence(hand, suit=None):
-    remaining_cards = hand.get_remaining_cards()
-    sequences = {card.suit: [] for card in remaining_cards}
-    max_sequence = []
-    for s in sequences:
-        ranks = sorted([card.rank for card in remaining_cards if card.suit == s])
-        temp = []
-        for group in consecutive_groups(ranks):
-            sequence = [Card(rank, s) for rank in list(group)]
-            temp.append(sequence)
-            sequences[s] = sequence \
-                if len(sequence) > len(sequences[s]) \
-                or (len(sequence) == len(sequences[s]) and sum([card.rank for card in sequence]) >
-                    sum([card.rank for card in sequences[s]])) else sequences[s]
-        if len(sequences[s]) > len(max_sequence):
-            max_sequence = sequences[s]
-        elif len(sequences[s]) == len(max_sequence):
-            max_sequence = sequences[s] if max(sequences[s]) > max(max_sequence) else max_sequence
-    return max_sequence if suit is None else sequences[suit]
-
-
 def compute_sets(hand):
     sets = {card.rank: [] for card in hand.cards}
     for card in [card for card in hand.cards if card.rank > 3]:
         sets[card.rank].append(card)
     return [card for card in sets.values() if len(card) >= 3]
-
-
-def compute_opponent_maximum_set(hand, rank=None):
-    remaining_cards = hand.get_remaining_cards()
-    sets = {card.rank: [] for card in remaining_cards if card.rank > 3}
-    max_set = []
-    for card in [card for card in remaining_cards if card.rank > 3]:
-        sets[card.rank].append(card)
-    for r in sets:
-        if len(sets[r]) > len(max_set):
-            max_set = sets[r]
-        elif len(sets[r]) == len(max_set):
-            max_set = sets[r] if r > max(max_set).rank else max_set
-    return max_set if rank is None else sets[rank]
 
 
 def compute_best_group(groups):
@@ -97,38 +54,7 @@ def compute_best_group(groups):
     return sequence
 
 
-def compute_set_discard(hand, n, hand_type):
-    n = 12 - n
-    high_cards = [card for card in hand.cards if card.rank in range(6, 8)] if hand_type == 1 \
-        else [card for card in hand.cards if card.rank == 8]
-    set_point = sorted([card for card in hand.get_best_set() if card in hand.points])
-    set_point_seq = sorted([card for card in hand.get_best_set() if card not in set_point])
-    set_point_seq_high_cards = sorted(
-        [card for card in hand.get_best_set()
-         if any(True for c in high_cards if c.suit == card.suit) and card not in set_point + set_point_seq])
-    set_cards = sorted([card for card in hand.get_best_set()
-                        if card not in set_point + set_point_seq + set_point_seq_high_cards])
-    remaining_cards = sorted([card for card in hand.cards if
-                              card not in set_point_seq_high_cards + set_point_seq + set_point + set_cards])
-
-    untouchables = []
-
-    while len(untouchables) != n:
-        if set_point_seq_high_cards:
-            untouchables.append(set_point_seq_high_cards.pop(-1))
-        elif set_point_seq:
-            untouchables.append(set_point_seq.pop(-1))
-        elif set_point:
-            untouchables.append(set_point.pop(-1))
-        elif set_cards:
-            untouchables.append(set_cards.pop(-1))
-        else:
-            untouchables.append(remaining_cards.pop(-1))
-
-    return [card for card in hand.cards if card not in untouchables]
-
-
-def compute_point_discard(hand, n, hand_type):
+def compute_discard(hand, n, hand_type):
     n = 12 - n
     high_cards = [card for card in hand.cards if card.rank in range(6, 8)] if hand_type == 1 \
         else [card for card in hand.cards if card.rank == 8]
@@ -156,8 +82,3 @@ def compute_point_discard(hand, n, hand_type):
             untouchables.append(remaining_cards.pop(-1))
 
     return [card for card in hand.cards if card not in untouchables]
-
-
-def compute_greedy_discard(hand, n):
-    return sorted(hand.cards)[:n]
-
