@@ -80,6 +80,7 @@ class DealState:
 
         possible_cards = [card for card in Deck().cards if card
                           not in impossible_cards + state.known_opponent_cards[opponent]]
+        random.shuffle(possible_cards)
 
         definite_cards = state.known_opponent_cards[opponent] + [
             card for player, card in state.current_trick if player == opponent]
@@ -87,40 +88,48 @@ class DealState:
         hand_length = len(state.hands[opponent])
 
         if state.declarations['point'] and not state.declarations['sequence'] and not state.declarations['set']:
-            valid_cards = []
+            random_hand_found = False
             target = [state.declaration_values[opponent]['point']]
             for cards in combinations(possible_cards, hand_length):
                 hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(list(cards))
-            possible_cards = state.remove_cards_from_unseen(
-                player=opponent, valid_cards=valid_cards, possible_cards=possible_cards)
+                    possible_cards = state.remove_cards_from_unseen(
+                        player=opponent, valid_cards=cards, possible_cards=possible_cards)
+                    random_hand_found = True
+                    break
+            if not random_hand_found:
+                possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
         elif state.declarations['point'] and state.declarations['sequence'] and not state.declarations['set']:
-            valid_cards = []
+            random_hand_found = False
             stats = ['point', 'sequence']
             target = [state.declaration_values[opponent][stat] for stat in stats]
             for cards in combinations(possible_cards, hand_length):
                 hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value(), hand.get_sequence_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(list(cards))
-            possible_cards = state.remove_cards_from_unseen(
-                player=opponent, valid_cards=valid_cards, possible_cards=possible_cards)
+                    possible_cards = state.remove_cards_from_unseen(
+                        player=opponent, valid_cards=cards, possible_cards=possible_cards)
+                    random_hand_found = True
+                    break
+            if not random_hand_found:
+                possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
         elif state.declarations['point'] and state.declarations['sequence'] and state.declarations['set']:
-            valid_cards = []
+            random_hand_found = False
             stats = ['point', 'sequence', 'set']
             target = [state.declaration_values[opponent][stat] for stat in stats]
             for cards in combinations(possible_cards, hand_length):
                 hand = Hand(definite_cards + list(cards))
                 sample = [hand.get_point_value(), hand.get_sequence_value(), hand.get_set_value()]
                 if check_sample_hand(target, sample):
-                    valid_cards.append(list(cards))
-            possible_cards = state.remove_cards_from_unseen(
-                player=opponent, valid_cards=valid_cards, possible_cards=possible_cards)
+                    possible_cards = state.remove_cards_from_unseen(
+                        player=opponent, valid_cards=cards, possible_cards=possible_cards)
+                    random_hand_found = True
+                    break
+            if not random_hand_found:
+                possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
         else:
-            state.hands[opponent] = possible_cards[:hand_length]
-            possible_cards = possible_cards[hand_length:]
+            possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
 
         if not state.exchanged[observer] or not state.exchanged[opponent]:
             talon_length = len(state.talon)
@@ -132,11 +141,12 @@ class DealState:
 
         return state
 
+    def default_random_hand(self, player, possible_cards, hand_length):
+        self.hands[player] = possible_cards[:hand_length]
+        return possible_cards[hand_length:]
+
     def remove_cards_from_unseen(self, player, valid_cards, possible_cards):
-        if valid_cards:
-            self.hands[player] = random.choice(valid_cards)
-        else:
-            self.hands[player] = possible_cards[:len(self.hands[player])]
+        self.hands[player] = list(valid_cards)
         return [card for card in possible_cards if card not in self.hands[player]]
 
     def get_next_player(self, player):
@@ -432,14 +442,14 @@ if __name__ == "__main__":
     players = ['score_strength', 'human']
     scores = {p: 0 for p in players}
 
-    deal = DealState(players, scores)
-
     start = time.time()
-    while deal.get_possible_moves():
-        if deal.player_to_play == 'score_strength':
-            deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play))
-        else:
-            deal.do_move(deal_kbs(deal))
-    print(time.time() - start)
+    for i in range(6):
+        deal = DealState(players, scores)
+        while deal.get_possible_moves():
+            if deal.player_to_play == 'score_strength':
+                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play))
+            else:
+                deal.do_move(deal_kbs(deal))
+        print(time.time() - start)
 
-    print(deal)
+    # print(deal)

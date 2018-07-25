@@ -1,6 +1,7 @@
 import multiprocessing
 import random
 import sqlite3
+import time
 from copy import deepcopy
 from math import sqrt
 
@@ -19,13 +20,24 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots(bots, db, games, iter_max, explorations):
+def evaluate_bots_parallel(bots, db, games, iter_max, explorations):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
     partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
         delayed(bot_partie)(bots, partie, db, iter_max, explorations)
         for partie in create_sample_games(partie, games))
+    conn = create_connection(db['file'])
+    with conn:
+        create_stats_table(conn, bots)
+
+
+def evaluate_bots_serial(bots, db, games, iter_max, explorations):
+    db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
+    scores = {p: 0 for p in bots}
+    for i in range(games):
+        partie = create_partie(deepcopy(bots), deepcopy(scores))
+        bot_partie(bots, partie, db, iter_max, explorations)
     conn = create_connection(db['file'])
     with conn:
         create_stats_table(conn, bots)
@@ -92,12 +104,18 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 100
+    games = 1
     explorations = [1/sqrt(2)] * 2
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
 
-    bot_names = [['absolute_result', 'kbs']]
+    bot_names = [['absolute_result', 'score_strength']]
 
+    t = 0
     for bots in bot_names:
-        evaluate_bots(bots=bots, db=db, games=games, iter_max=iter_max, explorations=explorations)
+        start = time.time()
+        evaluate_bots_serial(bots, db, games, iter_max, explorations)
+        t += time.time() - start
+
+    print('average time: ', str(t/games))
+
