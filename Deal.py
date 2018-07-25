@@ -11,7 +11,7 @@ def check_sample_hand(target, sample):
     return all(j == i for i, j in list(zip(target, sample)) if i > 0)
 
 
-class Deal:
+class DealState:
 
     def __init__(self, players, scores):
         self.players = players
@@ -43,7 +43,7 @@ class Deal:
         self.tricks_won = {p: 0 for p in self.players}
 
     def clone(self):
-        state = Deal(deepcopy(self.players), deepcopy(self.scores))
+        state = DealState(deepcopy(self.players), deepcopy(self.scores))
         state.player_to_play = self.player_to_play
         state.deal_scores = deepcopy(self.deal_scores)
         state.hands = deepcopy(self.hands)

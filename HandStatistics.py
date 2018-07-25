@@ -82,3 +82,7 @@ def compute_discard(hand, n, hand_type):
             untouchables.append(remaining_cards.pop(-1))
 
     return [card for card in hand.cards if card not in untouchables]
+
+
+def compute_greedy_discard(hand, n):
+    return sorted(hand.cards)[:n]

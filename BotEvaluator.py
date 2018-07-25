@@ -1,9 +1,7 @@
 import multiprocessing
 import random
 import sqlite3
-import time
 from copy import deepcopy
-from itertools import combinations
 from math import sqrt
 
 from joblib import Parallel, delayed
@@ -11,8 +9,6 @@ from joblib import Parallel, delayed
 from DealState import DealState
 from DealISMCTS import deal_ismcts
 from DealKBS import deal_kbs
-from Deck import Deck
-from Hand import Hand
 
 
 def create_partie(players, scores):
@@ -95,43 +91,13 @@ def create_stats_table(conn, bots):
         print(e)
 
 
-def create_hands_stats_csv(file):
-    with open(file, 'w+') as file:
-        file.write('H, S, C, D, point, sequence, set\n')
-
-
-def update_hand_stats_csv(file, hand):
-    hearts = ''.join(sorted([str(card.rank) for card in hand.cards if card.suit == 'H']))
-    spades = ''.join(sorted([str(card.rank) for card in hand.cards if card.suit == 'S']))
-    clubs = ''.join(sorted([str(card.rank) for card in hand.cards if card.suit == 'C']))
-    diamonds = ''.join(sorted([str(card.rank) for card in hand.cards if card.suit == 'D']))
-    with open(file, 'a') as file:
-        file.write('{}, {}, {}, {}, {}, {}, {}\n'.format(
-            hearts, spades, clubs, diamonds, str(hand.get_point_value()),
-            str(hand.get_sequence_value()), str(hand.get_set_value())))
-
-
-def update_hand_stats_csv_in_parallel(conn):
-    Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(update_hand_stats_csv)(conn, Hand(cards))
-        for cards in combinations(Deck().cards, 12)
-    )
-
-
 if __name__ == "__main__":
-    games = 1
+    games = 100
     explorations = [1/sqrt(2)] * 2
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
 
-    bot_names = ['absolute_result', 'score_strength']
+    bot_names = [['absolute_result', 'kbs']]
 
-    # start = time.time()
-    # evaluate_bots(bots=bot_names, db=db, games=games, iter_max=iter_max, explorations=explorations)
-    # print(time.time() - start)
-
-    file = 'data/all_possible_hands.csv'
-    create_hands_stats_csv(file)
-    start = time.time()
-    update_hand_stats_csv_in_parallel(file)
-    print(time.time() - start)
+    for bots in bot_names:
+        evaluate_bots(bots=bots, db=db, games=games, iter_max=iter_max, explorations=explorations)
