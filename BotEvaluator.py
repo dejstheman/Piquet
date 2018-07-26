@@ -104,18 +104,17 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 1
-    explorations = [1/sqrt(2)] * 2
+    games = 99
+    explorations = [[1/sqrt(2), 1], [1/sqrt(2), 0.5]]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
 
     bot_names = [['absolute_result', 'score_strength']]
 
     t = 0
-    for bots in bot_names:
+    for e in explorations:
         start = time.time()
-        evaluate_bots_serial(bots, db, games, iter_max, explorations)
+        for bot in bot_names:
+            evaluate_bots_parallel(bot, db, games, iter_max, e)
         t += time.time() - start
-
-    print('average time: ', str(t/games))
-
+        print('average time: ', str(t / games))
