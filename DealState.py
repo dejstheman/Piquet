@@ -1,10 +1,8 @@
-import random
 import time
 from copy import deepcopy
 from itertools import combinations
 
 import HandStatistics
-from Card import Card
 from DealISMCTS import deal_ismcts
 from DealKBS import deal_kbs
 from Deck import Deck
@@ -32,7 +30,6 @@ class DealState:
         self.no_of_discards = {p: 0 for p in self.players}
         self.discards = {p: [] for p in self.players}
         self.cards_not_in_play = []
-        self.known_opponent_cards = {p: [] for p in self.players}
         self.played_cards = {p: [] for p in self.players}
         self.exchanged = {p: False for p in self.players}
         self.younger_look_up_card = False
@@ -58,7 +55,6 @@ class DealState:
         state.no_of_discards = deepcopy(self.no_of_discards)
         state.discards = deepcopy(self.discards)
         state.cards_not_in_play = deepcopy(self.cards_not_in_play)
-        state.known_opponent_cards = deepcopy(self.known_opponent_cards)
         state.played_cards = deepcopy(self.played_cards)
         state.exchanged = deepcopy(self.exchanged)
         state.younger_look_up_card = self.younger_look_up_card
@@ -78,23 +74,21 @@ class DealState:
         opponent = self.get_next_player(observer)
 
         impossible_cards = state.hands[observer] + state.discards[observer]
-        impossible_cards += state.played_cards[observer] + state.known_opponent_cards[observer]
+        impossible_cards += state.played_cards[observer] + state.played_cards[opponent]
         impossible_cards += [card for _, card in state.current_trick]
 
-        possible_cards = [card for card in Deck().cards if card
-                          not in impossible_cards + state.known_opponent_cards[opponent]]
+        possible_cards = [card for card in Deck().cards if card not in impossible_cards]
 
         hand_length = len(state.hands[opponent])
         if state.history:
             target = state.declaration_values[opponent]
-            definite_cards = state.known_opponent_cards[opponent] + [
-                card for player, card in state.current_trick if player == opponent]
+            definite_cards = state.played_cards[opponent]
             hand = Hand(deepcopy(definite_cards))
             while len(hand.cards) < 12:
-                stats = {'point': hand.get_point_value() != target['point'] if target['point'] > 0 else False,
-                         'sequence': hand.get_sequence_value() != target['sequence'] if target[
+                stats = {'point': hand.get_point_value() < target['point'] if target['point'] > 0 else False,
+                         'sequence': hand.get_sequence_value() < target['sequence'] if target[
                                                                                             'sequence'] > 0 else False,
-                         'set': hand.get_set_value() != target['set'] if target['set'] > 0 else False}
+                         'set': hand.get_set_value() < target['set'] if target['set'] > 0 else False}
                 possible_cards = [card for card in possible_cards if card not in hand.cards]
                 hand.add_random_card(stats, possible_cards)
             cards = [card for card in hand.cards if card not in definite_cards]
@@ -288,6 +282,7 @@ class DealState:
         if not self.current_trick:
             self.update_deal_score(self.player_to_play, 1)
         self.current_trick.append((self.player_to_play, move))
+        self.played_cards[self.player_to_play].append(move)
         self.hands[self.player_to_play].remove(move)
         self.player_to_play = self.get_next_player(self.player_to_play)
 
@@ -318,10 +313,10 @@ class DealState:
         else:
             self.update_deal_score(trick_winner, 1)
 
-        for p in self.players:
-            self.known_opponent_cards[p] += [
-                card for player, card in self.current_trick if player == self.get_next_player(p)]
-            self.played_cards[p] += [card for player, card in self.current_trick if player == p]
+        # for p in self.players:
+        #     self.known_opponent_cards[p] += [
+        #         card for player, card in self.current_trick if player == self.get_next_player(p)]
+        #     self.played_cards[p] += [card for player, card in self.current_trick if player == p]
         self.current_trick = []
         self.player_to_play = trick_winner
 
@@ -410,37 +405,11 @@ if __name__ == "__main__":
     start = time.time()
     for i in range(6):
         deal = DealState(players, scores)
-        deal.hands['score_strength'] = []
-        deal.hands['score_strength'].append(Card(3, 'H'))
-        deal.hands['score_strength'].append(Card(1, 'S'))
-        deal.hands['score_strength'].append(Card(4, 'C'))
-        deal.hands['score_strength'].append(Card(7, 'S'))
-        deal.hands['score_strength'].append(Card(7, 'C'))
-        deal.hands['score_strength'].append(Card(8, 'D'))
-        deal.hands['score_strength'].append(Card(7, 'D'))
-        deal.hands['score_strength'].append(Card(1, 'D'))
-        deal.hands['score_strength'].append(Card(6, 'D'))
-        deal.hands['score_strength'].append(Card(7, 'H'))
-        deal.hands['score_strength'].append(Card(2, 'S'))
-        deal.hands['score_strength'].append(Card(1, 'H'))
-        deal.hands['human'] = []
-        deal.hands['human'].append(Card(4, 'D'))
-        deal.hands['human'].append(Card(2, 'D'))
-        deal.hands['human'].append(Card(5, 'H'))
-        deal.hands['human'].append(Card(5, 'C'))
-        deal.hands['human'].append(Card(6, 'C'))
-        deal.hands['human'].append(Card(3, 'C'))
-        deal.hands['human'].append(Card(6, 'H'))
-        deal.hands['human'].append(Card(4, 'S'))
-        deal.hands['human'].append(Card(3, 'D'))
-        deal.hands['human'].append(Card(5, 'D'))
-        deal.hands['human'].append(Card(8, 'H'))
-        deal.hands['human'].append(Card(5, 'S'))
         while deal.get_possible_moves():
             if deal.player_to_play == 'absolute_result_history':
-                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play, history=True))
+                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=True))
             else:
-                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play, history=False))
+                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False))
         players = players[::-1]
         print(deal)
     print(time.time()-start)

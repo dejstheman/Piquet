@@ -168,7 +168,7 @@ class Hand:
             if not addable_cards:
                 self.add_card(random.choice(self.get_impotent_card(possible_cards)))
             else:
-                self.add_card(random.choice(addable_cards))
+                self.add_card(addable_cards[0])
 
     def __repr__(self):
         return str(self.cards)
@@ -198,9 +198,9 @@ if __name__ == "__main__":
     target = {'point': 5, 'sequence': 0, 'set': 3}
 
     while len(hand.cards) < 12:
-        stats = {'point': hand.get_point_value() != target['point'] if target['point'] > 0 else False,
-                 'sequence': hand.get_sequence_value() != target['sequence'] if target['sequence'] > 0 else False,
-                 'set': hand.get_set_value() != target['set'] if target['set'] > 0 else False}
+        stats = {'point': hand.get_point_value() < target['point'] if target['point'] > 0 else False,
+                 'sequence': hand.get_sequence_value() < target['sequence'] if target['sequence'] > 0 else False,
+                 'set': hand.get_set_value() < target['set'] if target['set'] > 0 else False}
         hand.add_random_card(stats, hand.get_remaining_cards())
         if (hand.get_point_value() > target['point'] and stats['point']) or \
                 (hand.get_set_value() > target['set'] and stats['set']) or \
