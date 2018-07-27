@@ -20,30 +20,19 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots_parallel(bots, db, games, iter_max, explorations):
+def evaluate_bots_parallel(bots, db, games, iter_max, explorations, histories):
     db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
     partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(bot_partie)(bots, partie, db, iter_max, explorations)
+        delayed(bot_partie)(bots, partie, db, iter_max, explorations, histories)
         for partie in create_sample_games(partie, games))
     conn = create_connection(db['file'])
     with conn:
         create_stats_table(conn, bots)
 
 
-def evaluate_bots_serial(bots, db, games, iter_max, explorations):
-    db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
-    scores = {p: 0 for p in bots}
-    for i in range(games):
-        partie = create_partie(deepcopy(bots), deepcopy(scores))
-        bot_partie(bots, partie, db, iter_max, explorations)
-    conn = create_connection(db['file'])
-    with conn:
-        create_stats_table(conn, bots)
-
-
-def bot_partie(bots, partie, db, iter_max, explorations):
+def bot_partie(bots, partie, db, iter_max, explorations, histories):
     current = deepcopy(partie)
     for deal in current:
         while deal.get_possible_moves():
@@ -54,7 +43,8 @@ def bot_partie(bots, partie, db, iter_max, explorations):
             else:
                 e = explorations[bots.index(deal.player_to_play)]
                 deal.do_move(deal_ismcts(
-                    root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play))
+                    root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play,
+                    history=histories[deal.players.index(deal.player_to_play)]))
     scores = current[0].scores
     values = (iter_max, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]])
     conn = create_connection(db['file'])
@@ -104,17 +94,16 @@ def create_stats_table(conn, bots):
 
 
 if __name__ == "__main__":
-    games = 99
-    explorations = [[1/sqrt(2), 1], [1/sqrt(2), 0.5]]
+    games = 1
+    explorations = [[1/sqrt(2), 1/sqrt(2)]]
     iter_max = 500
     db = {'file': 'data/evaluator_stats.db'}
 
-    bot_names = [['absolute_result', 'score_strength']]
+    bot_names = [['absolute_result', 'absolute_result_with_history']]
+    histories = [[False, True]]
 
-    t = 0
     for e in explorations:
-        start = time.time()
-        for bot in bot_names:
-            evaluate_bots_parallel(bot, db, games, iter_max, e)
-        t += time.time() - start
-        print('average time: ', str(t / games))
+        for i in range(len(bot_names)):
+            start = time.time()
+            evaluate_bots_parallel(bot_names[i], db, games, iter_max, e, histories[i])
+            print(time.time() - start)

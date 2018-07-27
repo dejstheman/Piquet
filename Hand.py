@@ -100,7 +100,7 @@ class Hand:
     def get_sequence_increasing_cards(self, possible_cards):
         suit_seqs = {suit: max([list(g)
                                 for g in consecutive_groups(
-                sorted([card.rank for card in hand.cards if card.suit == suit]))],
+                sorted([card.rank for card in self.cards if card.suit == suit]))],
                                key=lambda g: len(g)) for suit in {card.suit for card in self.cards}}
         seq_sorted_suits = [p[0] for p in sorted(suit_seqs.items(), key=lambda x: len(x[1]), reverse=True)]
 
@@ -168,7 +168,7 @@ class Hand:
             if not addable_cards:
                 self.add_card(random.choice(self.get_impotent_card(possible_cards)))
             else:
-                self.add_card(addable_cards[0])
+                self.add_card(random.choice(addable_cards))
 
     def __repr__(self):
         return str(self.cards)

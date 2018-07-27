@@ -10,5 +10,7 @@ from Hand import Hand, get_longest_sub_sequence
 
 
 if __name__ == "__main__":
-    print(get_longest_sub_sequence([1, 3, 4]))
+    test = []
+    print(test)
+    print(deepcopy(test))
 

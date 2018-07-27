@@ -4,6 +4,7 @@ from copy import deepcopy
 from itertools import combinations
 
 import HandStatistics
+from Card import Card
 from DealISMCTS import deal_ismcts
 from DealKBS import deal_kbs
 from Deck import Deck
@@ -43,6 +44,7 @@ class DealState:
         self.max_tricks = 12
         self.tricks_in_round = 12
         self.tricks_won = {p: 0 for p in self.players}
+        self.history = False
 
     def clone(self):
         state = DealState(deepcopy(self.players), deepcopy(self.scores))
@@ -70,8 +72,9 @@ class DealState:
 
         return state
 
-    def clone_and_randomise(self, observer):
+    def clone_and_randomise(self, observer, history):
         state = self.clone()
+        state.history = history
         opponent = self.get_next_player(observer)
 
         impossible_cards = state.hands[observer] + state.discards[observer]
@@ -80,57 +83,26 @@ class DealState:
 
         possible_cards = [card for card in Deck().cards if card
                           not in impossible_cards + state.known_opponent_cards[opponent]]
-        random.shuffle(possible_cards)
-
-        definite_cards = state.known_opponent_cards[opponent] + [
-            card for player, card in state.current_trick if player == opponent]
 
         hand_length = len(state.hands[opponent])
-
-        # if state.declarations['point'] and not state.declarations['sequence'] and not state.declarations['set']:
-        #     random_hand_found = False
-        #     target = [state.declaration_values[opponent]['point']]
-        #     for cards in combinations(possible_cards, hand_length):
-        #         hand = Hand(definite_cards + list(cards))
-        #         sample = [hand.get_point_value()]
-        #         if check_sample_hand(target, sample):
-        #             possible_cards = state.remove_cards_from_unseen(
-        #                 player=opponent, valid_cards=cards, possible_cards=possible_cards)
-        #             random_hand_found = True
-        #             break
-        #     if not random_hand_found:
-        #         possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
-        # elif state.declarations['point'] and state.declarations['sequence'] and not state.declarations['set']:
-        #     random_hand_found = False
-        #     stats = ['point', 'sequence']
-        #     target = [state.declaration_values[opponent][stat] for stat in stats]
-        #     for cards in combinations(possible_cards, hand_length):
-        #         hand = Hand(definite_cards + list(cards))
-        #         sample = [hand.get_point_value(), hand.get_sequence_value()]
-        #         if check_sample_hand(target, sample):
-        #             possible_cards = state.remove_cards_from_unseen(
-        #                 player=opponent, valid_cards=cards, possible_cards=possible_cards)
-        #             random_hand_found = True
-        #             break
-        #     if not random_hand_found:
-        #         possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
-        # elif state.declarations['point'] and state.declarations['sequence'] and state.declarations['set']:
-        #     random_hand_found = False
-        #     stats = ['point', 'sequence', 'set']
-        #     target = [state.declaration_values[opponent][stat] for stat in stats]
-        #     for cards in combinations(possible_cards, hand_length):
-        #         hand = Hand(definite_cards + list(cards))
-        #         sample = [hand.get_point_value(), hand.get_sequence_value(), hand.get_set_value()]
-        #         if check_sample_hand(target, sample):
-        #             possible_cards = state.remove_cards_from_unseen(
-        #                 player=opponent, valid_cards=cards, possible_cards=possible_cards)
-        #             random_hand_found = True
-        #             break
-        #     if not random_hand_found:
-        #         possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
-        # else:
-        #     possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
-        possible_cards = self.default_random_hand(opponent, possible_cards, hand_length)
+        if state.history:
+            target = state.declaration_values[opponent]
+            definite_cards = state.known_opponent_cards[opponent] + [
+                card for player, card in state.current_trick if player == opponent]
+            hand = Hand(deepcopy(definite_cards))
+            while len(hand.cards) < 12:
+                stats = {'point': hand.get_point_value() != target['point'] if target['point'] > 0 else False,
+                         'sequence': hand.get_sequence_value() != target['sequence'] if target[
+                                                                                            'sequence'] > 0 else False,
+                         'set': hand.get_set_value() != target['set'] if target['set'] > 0 else False}
+                possible_cards = [card for card in possible_cards if card not in hand.cards]
+                hand.add_random_card(stats, possible_cards)
+            cards = [card for card in hand.cards if card not in definite_cards]
+            state.hands[opponent] = cards
+            possible_cards = [card for card in possible_cards if card not in cards]
+        else:
+            state.hands[opponent] = possible_cards[:hand_length]
+            possible_cards = possible_cards[hand_length:]
 
         if not state.exchanged[observer] or not state.exchanged[opponent]:
             talon_length = len(state.talon)
@@ -141,14 +113,6 @@ class DealState:
         state.discards[opponent] = possible_cards[:discards_length]
 
         return state
-
-    def default_random_hand(self, player, possible_cards, hand_length):
-        self.hands[player] = possible_cards[:hand_length]
-        return possible_cards[hand_length:]
-
-    def remove_cards_from_unseen(self, player, valid_cards, possible_cards):
-        self.hands[player] = list(valid_cards)
-        return [card for card in possible_cards if card not in self.hands[player]]
 
     def get_next_player(self, player):
         return self.players[1] if self.players.index(player) == 0 else self.players[0]
@@ -431,26 +395,52 @@ class DealState:
             # result += "{} carte blanche: {}\n".format(p, self.carte_blanche[p])
             # result += "{} discards: {}\n".format(p, self.discards[p])
             # result += "{} seen cards: {}\n".format(p, self.seen_cards[p])
-            for stat in self.declaration_values[p]:
-                result += '{} {}: {}\n'.format(p, stat, self.declaration_values[p][stat])
+            # for stat in self.declaration_values[p]:
+            #     result += '{} {}: {}\n'.format(p, stat, self.declaration_values[p][stat])
             result += "{} score: {}\n".format(p, self.scores[p])
-            result += "{} maximum possible score: {}\n\n".format(p, self.get_maximum_possible_score(p))
+            # result += "{} maximum possible score: {}\n\n".format(p, self.get_maximum_possible_score(p))
 
         return result
 
 
 if __name__ == "__main__":
-    players = ['score_strength', 'human']
+    players = ['absolute_result_history', 'absolute_result']
     scores = {p: 0 for p in players}
 
     start = time.time()
     for i in range(6):
         deal = DealState(players, scores)
+        deal.hands['score_strength'] = []
+        deal.hands['score_strength'].append(Card(3, 'H'))
+        deal.hands['score_strength'].append(Card(1, 'S'))
+        deal.hands['score_strength'].append(Card(4, 'C'))
+        deal.hands['score_strength'].append(Card(7, 'S'))
+        deal.hands['score_strength'].append(Card(7, 'C'))
+        deal.hands['score_strength'].append(Card(8, 'D'))
+        deal.hands['score_strength'].append(Card(7, 'D'))
+        deal.hands['score_strength'].append(Card(1, 'D'))
+        deal.hands['score_strength'].append(Card(6, 'D'))
+        deal.hands['score_strength'].append(Card(7, 'H'))
+        deal.hands['score_strength'].append(Card(2, 'S'))
+        deal.hands['score_strength'].append(Card(1, 'H'))
+        deal.hands['human'] = []
+        deal.hands['human'].append(Card(4, 'D'))
+        deal.hands['human'].append(Card(2, 'D'))
+        deal.hands['human'].append(Card(5, 'H'))
+        deal.hands['human'].append(Card(5, 'C'))
+        deal.hands['human'].append(Card(6, 'C'))
+        deal.hands['human'].append(Card(3, 'C'))
+        deal.hands['human'].append(Card(6, 'H'))
+        deal.hands['human'].append(Card(4, 'S'))
+        deal.hands['human'].append(Card(3, 'D'))
+        deal.hands['human'].append(Card(5, 'D'))
+        deal.hands['human'].append(Card(8, 'H'))
+        deal.hands['human'].append(Card(5, 'S'))
         while deal.get_possible_moves():
-            if deal.player_to_play == 'score_strength':
-                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play))
+            if deal.player_to_play == 'absolute_result_history':
+                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play, history=True))
             else:
-                deal.do_move(deal_kbs(deal))
-        print(time.time() - start)
-
-    # print(deal)
+                deal.do_move(deal_ismcts(deal, 500, result_type=deal.player_to_play, history=False))
+        players = players[::-1]
+        print(deal)
+    print(time.time()-start)

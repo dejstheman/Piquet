@@ -1,7 +1,7 @@
 import HandStatistics
 from Hand import Hand
 
-# TODO update discard strategy
+
 def deal_kbs(state):
     if any(x for x in state.carte_blanche.values()) and not state.discards[state.player_to_play]:
         return carte_blanche_discard(state)
@@ -58,7 +58,7 @@ def default_discard(state):
 
 
 def exchange_cards(state):
-    state.exchange_cards()
+    return 'exchange'
 
 
 def declare_stat(state):
