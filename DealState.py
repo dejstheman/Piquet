@@ -403,7 +403,7 @@ if __name__ == "__main__":
     scores = {p: 0 for p in players}
 
     start = time.time()
-    for i in range(6):
+    for i in range(48):
         deal = DealState(players, scores)
         while deal.get_possible_moves():
             if deal.player_to_play == 'absolute_result_history':

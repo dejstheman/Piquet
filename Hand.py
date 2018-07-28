@@ -1,6 +1,7 @@
 import random
 from copy import deepcopy
 
+import numpy
 from more_itertools import consecutive_groups
 
 from Card import Card
@@ -168,7 +169,11 @@ class Hand:
             if not addable_cards:
                 self.add_card(random.choice(self.get_impotent_card(possible_cards)))
             else:
-                self.add_card(addable_cards[0])
+                total = 0
+                for i in range(len(addable_cards)):
+                    total += i+1
+                p = [1.0*(len(addable_cards) - addable_cards.index(x)) / total for x in addable_cards]
+                self.add_card(numpy.random.choice(addable_cards, p=p))
 
     def __repr__(self):
         return str(self.cards)

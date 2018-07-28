@@ -32,6 +32,17 @@ def evaluate_bots_parallel(bots, db, games, iter_max, explorations, histories):
         create_stats_table(conn, bots)
 
 
+def evaluate_bots_serial(bots, db, games, iter_max, explorations, histories):
+    db['table_name'] = '{}_vs_{}_bot'.format(bots[0], bots[1])
+    scores = {p: 0 for p in bots}
+    for i in range(games):
+        partie = create_partie(deepcopy(bots), deepcopy(scores))
+        bot_partie(bots, partie, db, iter_max, explorations, histories)
+    conn = create_connection(db['file'])
+    with conn:
+        create_stats_table(conn, bots)
+
+
 def bot_partie(bots, partie, db, iter_max, explorations, histories):
     current = deepcopy(partie)
     for deal in current:
@@ -96,14 +107,13 @@ def create_stats_table(conn, bots):
 if __name__ == "__main__":
     games = 100
     explorations = [[1/sqrt(2), 1/sqrt(2)]]
-    iter_max = 100
+    iter_max = 1000
     db = {'file': 'data/evaluator_stats.db'}
 
-    bot_names = [['absolute_result', 'absolute_result_with_history']]
-    histories = [[False, True]]
+    bot_names = [['absolute_result', 'kbs'], ['absolute_result', 'random'],
+                 ['absolute_result_with_history', 'kbs'], ['absolute_result_with_history', 'random']]
+    histories = [[False, False], [False, False], [True, False], [True, False]]
 
     for e in explorations:
         for i in range(len(bot_names)):
-            start = time.time()
             evaluate_bots_parallel(bot_names[i], db, games, iter_max, e, histories[i])
-            print(time.time() - start)
