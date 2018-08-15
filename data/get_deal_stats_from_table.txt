@@ -1,6 +1,6 @@
-DROP TABLE IF EXISTS {0}_vs_{1}_bot_stats;
+DROP TABLE IF EXISTS {0}_vs_{1}_deal_bots_stats;
 
-CREATE TABLE {0}_vs_{1}_bot_stats
+CREATE TABLE {0}_vs_{1}_deal_bots_stats
   (
      iter_max                  REAL,
      {0}_exploration           REAL,
@@ -13,7 +13,7 @@ CREATE TABLE {0}_vs_{1}_bot_stats
      {1}_rubicon_percentage REAL
   );
 
-INSERT INTO {0}_vs_{1}_bot_stats
+INSERT INTO {0}_vs_{1}_deal_bots_stats
 SELECT average.iter_max,
        average.{0}_exploration,
        {0}_average,
@@ -30,7 +30,7 @@ FROM   (SELECT iter_max,
                {1}_exploration,
                Avg({0})    AS {0}_average,
                Avg({1}) AS {1}_average
-        FROM   {0}_vs_{1}_bot
+        FROM   {0}_vs_{1}_deal_bots
         GROUP  BY iter_max,
                   {0}_exploration,
                   {1}_exploration) AS average
@@ -38,7 +38,7 @@ FROM   (SELECT iter_max,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {0}_wins
-                  FROM   {0}_vs_{1}_bot
+                  FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} > {1}
                   GROUP  BY iter_max,
                             {0}_exploration,
@@ -50,7 +50,7 @@ FROM   (SELECT iter_max,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {1}_wins
-                  FROM   {0}_vs_{1}_bot
+                  FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} < {1}
                   GROUP  BY iter_max,
                             {0}_exploration,
@@ -62,7 +62,7 @@ FROM   (SELECT iter_max,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {0}_rubicon
-                  FROM   {0}_vs_{1}_bot
+                  FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} >= 100
                   GROUP  BY iter_max,
                             {0}_exploration,
@@ -74,7 +74,7 @@ FROM   (SELECT iter_max,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {1}_rubicon
-                  FROM   {0}_vs_{1}_bot
+                  FROM   {0}_vs_{1}_deal_bots
                   WHERE  {1} >= 100
                   GROUP  BY iter_max,
                             {0}_exploration,
@@ -87,7 +87,7 @@ FROM   (SELECT iter_max,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS total_games
-                  FROM   {0}_vs_{1}_bot
+                  FROM   {0}_vs_{1}_deal_bots
                   GROUP  BY iter_max,
                             {0}_exploration,
                             {1}_exploration) AS total_games
