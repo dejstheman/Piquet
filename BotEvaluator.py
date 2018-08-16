@@ -100,14 +100,32 @@ def create_stats_table(conn, bots, filename):
 
 
 if __name__ == "__main__":
-    games = 1000
+    games = 100
     explorations = [[1/sqrt(2), 1/sqrt(2)]]
     iter_max = 1000
     db = {'file': 'data/evaluator_stats.db'}
 
-    bot_names = [['kbs', 'random']]
-    histories = [[False, True]]
+    bot_names = []
+    bot_names.append(['absolute_result', 'kbs'])
+    bot_names.append(['absolute_result', 'random'])
+    bot_names.append(['absolute_result', 'absolute_result_with_history'])
+    bot_names.append(['absolute_result_with_history', 'score_strength_with_history'])
+    bot_names.append(['absolute_result_with_history', 'random'])
+    bot_names.append(['absolute_result_with_history', 'kbs'])
+    bot_names.append(['score_strength_with_history', 'kbs'])
+    bot_names.append(['score_strength_with_history', 'random'])
+    histories = []
+    histories.append([False, None])
+    histories.append([False, None])
+    histories.append([False, True])
+    histories.append([True, True])
+    histories.append([True, None])
+    histories.append([True, None])
+    histories.append([True, None])
+    histories.append([True, None])
 
     for e in explorations:
         for i in range(len(bot_names)):
+            if any(True for x in histories[i] if x is None):
+                iter_max = 500
             evaluate_bots_parallel(bot_names[i], db, games, iter_max, e, histories[i])

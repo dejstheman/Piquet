@@ -10,6 +10,8 @@ from Hand import Hand, get_longest_sub_sequence
 
 
 if __name__ == "__main__":
-    test = 'kbs_vs_random_partie_bots'
-    print(test.replace('partie', 'deal'))
-    print(test)
+    test = [False, None]
+    if any(True for x in test if x is None):
+        print('yes')
+    else:
+        print('no')
