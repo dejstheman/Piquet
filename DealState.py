@@ -42,6 +42,10 @@ class DealState:
         self.tricks_in_round = 12
         self.tricks_won = {p: 0 for p in self.players}
         self.history = False
+        self.repique = None
+        self.pique = None
+        self.cards = None
+        self.capot = None
 
     def clone(self):
         state = DealState(deepcopy(self.players), deepcopy(self.scores))
@@ -65,6 +69,10 @@ class DealState:
         state.current_trick = deepcopy(self.current_trick)
         state.tricks_in_round = self.tricks_in_round
         state.tricks_won = deepcopy(self.tricks_won)
+        state.repique = self.repique
+        state.pique = self.pique
+        state.cards = self.cards
+        state.capot = self.cards
 
         return state
 
@@ -261,12 +269,14 @@ class DealState:
                     opponent_declarations == 0 and not self.repique_scored:
                 self.deal_scores[p] += 60
                 self.repique_scored = True
+                self.repique = p
 
     def check_for_pique(self, player):
         if self.deal_scores[player] >= 30 and \
                 self.deal_scores[self.get_next_player(player)] == 0:
             self.deal_scores[player] += 30
             self.pique_scored = True
+            self.pique = player
 
     def younger_peep(self, move):
         if move == 'peep':
@@ -305,8 +315,10 @@ class DealState:
             if len(set(self.tricks_won.values())) > 1:
                 max_trick_winner = max(self.players, key=lambda p: self.tricks_won[p])
                 self.deal_scores[max_trick_winner] += 10
+                self.cards = max_trick_winner
                 if self.tricks_won[max_trick_winner] == 12:
                     self.deal_scores[max_trick_winner] += 40
+                    self.capot = max_trick_winner
 
             for p in self.players:
                 self.scores[p] += self.deal_scores[p]
