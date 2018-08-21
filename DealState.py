@@ -76,7 +76,7 @@ class DealState:
 
         return state
 
-    def clone_and_randomise(self, observer, history):
+    def clone_and_randomise(self, observer, history, cheat):
         state = self.clone()
         state.history = history
         opponent = self.get_next_player(observer)
@@ -88,23 +88,24 @@ class DealState:
         possible_cards = [card for card in Deck().cards if card not in impossible_cards]
 
         hand_length = len(state.hands[opponent])
-        if state.history:
-            target = state.declaration_values[opponent]
-            definite_cards = state.played_cards[opponent]
-            hand = Hand(deepcopy(definite_cards))
-            while len(hand.cards) < 12:
-                stats = {'point': hand.get_point_value() < target['point'] if target['point'] > 0 else False,
-                         'sequence': hand.get_sequence_value() < target['sequence'] if target[
-                                                                                            'sequence'] > 0 else False,
-                         'set': hand.get_set_value() < target['set'] if target['set'] > 0 else False}
-                possible_cards = [card for card in possible_cards if card not in hand.cards]
-                hand.add_random_card(stats, possible_cards)
-            cards = [card for card in hand.cards if card not in definite_cards]
-            state.hands[opponent] = cards
-            possible_cards = [card for card in possible_cards if card not in cards]
-        else:
-            state.hands[opponent] = possible_cards[:hand_length]
-            possible_cards = possible_cards[hand_length:]
+        if not cheat:
+            if state.history:
+                target = state.declaration_values[opponent]
+                definite_cards = state.played_cards[opponent]
+                hand = Hand(deepcopy(definite_cards))
+                while len(hand.cards) < 12:
+                    stats = {'point': hand.get_point_value() < target['point'] if target['point'] > 0 else False,
+                             'sequence': hand.get_sequence_value() < target['sequence'] if target[
+                                                                                                'sequence'] > 0 else False,
+                             'set': hand.get_set_value() < target['set'] if target['set'] > 0 else False}
+                    possible_cards = [card for card in possible_cards if card not in hand.cards]
+                    hand.add_random_card(stats, possible_cards)
+                cards = [card for card in hand.cards if card not in definite_cards]
+                state.hands[opponent] = cards
+                possible_cards = [card for card in possible_cards if card not in cards]
+            else:
+                state.hands[opponent] = possible_cards[:hand_length]
+                possible_cards = possible_cards[hand_length:]
 
         if not state.exchanged[observer] or not state.exchanged[opponent]:
             talon_length = len(state.talon)
@@ -411,17 +412,18 @@ class DealState:
 
 
 if __name__ == "__main__":
-    players = ['absolute_result_history', 'absolute_result']
+    players = ['cheat', 'normal']
     scores = {p: 0 for p in players}
 
     start = time.time()
-    for i in range(48):
+    for i in range(1):
         deal = DealState(players, scores)
         while deal.get_possible_moves():
-            if deal.player_to_play == 'absolute_result_history':
-                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=True))
+            if deal.player_to_play == 'cheat':
+                deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, history=False, cheat=True))
             else:
-                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False))
+                # deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, cheat=False))
+                deal.do_move(deal_kbs(deal))
         players = players[::-1]
         print(deal)
     print(time.time()-start)
