@@ -35,5 +35,3 @@ class DealNode:
         if self.player_just_played is not None:
             if update_type.startswith('absolute_result'):
                 self.wins += terminal_state.get_absolute_result(self.player_just_played)
-            elif update_type.startswith('score_strength'):
-                self.wins += terminal_state.get_score_strength(self.player_just_played)

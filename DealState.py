@@ -327,11 +327,6 @@ class DealState:
                 self.scores[p] += self.deal_scores[p]
         else:
             self.update_deal_score(trick_winner, 1)
-
-        # for p in self.players:
-        #     self.known_opponent_cards[p] += [
-        #         card for player, card in self.current_trick if player == self.get_next_player(p)]
-        #     self.played_cards[p] += [card for player, card in self.current_trick if player == p]
         self.current_trick = []
         self.player_to_play = trick_winner
 
@@ -348,6 +343,20 @@ class DealState:
             return ['peep', 'pass']
         else:
             return self.get_possible_tricks()
+
+    def get_decisive_moves(self):
+        moves = self.get_possible_moves()
+        if len(moves) > 12:
+            return self.get_possible_moves()
+        else:
+            decisive_moves = []
+            for m in moves:
+                deal = self.clone()
+                deal.do_move(m)
+                if deal.deal_scores[deal.player_to_play] > \
+                        deal.estimate_opponent_maximum_possible_score(deal.player_to_play):
+                    decisive_moves.append(m)
+            return decisive_moves if decisive_moves else self.get_possible_moves()
 
     def get_possible_no_of_discards(self):
         return range(self.max_discards[self.player_to_play], self.max_discards[self.player_to_play] + 1)
@@ -379,24 +388,61 @@ class DealState:
                 return self.hands[self.player_to_play]
 
     def get_maximum_possible_score(self, player):
-        declaration_values = sum(self.declaration_values[player].values())
-        maximum = 0
-        if self.players.index(player) == 0:
-            maximum += 10 if self.carte_blanche[player] else 0
-            maximum += declaration_values + 135 if maximum + declaration_values >= 30 \
-                else declaration_values + 105
+        maximum = self.deal_scores[player]
+        opponent = self.get_next_player(player)
+        if self.declarations['point']:
+            maximum += self.declaration_values[player]['point']
         else:
-            maximum += declaration_values + 114 if self.carte_blanche[player] \
-                else declaration_values + 104
+            maximum += Hand(self.hands[player]).get_point_value()
+        if self.declarations['sequence']:
+            maximum += self.declaration_values[player]['sequence']
+        else:
+            maximum += Hand(self.hands[player]).get_sequence_value()
+        if self.declarations['set']:
+            maximum += self.declaration_values[player]['set']
+        else:
+            maximum += Hand(self.hands[player]).get_set_value()
+        if sum(self.declaration_values[opponent].values()) == 0 and \
+                self.deal_scores[opponent] == 0 and self.tricks_in_round == 12:
+            maximum += 60
+        if self.deal_scores[opponent] == 0 and self.tricks_in_round < 12:
+            maximum += 30
+        if self.tricks_won[opponent] < 6:
+            maximum += 10
+        if self.tricks_won[opponent] == 0:
+            maximum += 40
 
+        return maximum
+
+    def estimate_opponent_maximum_possible_score(self, player):
+        opponent = self.get_next_player(player)
+        remaining_cards = Hand([card for card in Deck().cards if card not in self.hands[player]])
+        maximum = self.deal_scores[opponent]
+        if self.declarations['point']:
+            maximum += self.declaration_values[opponent]['point']
+        else:
+            maximum += remaining_cards.get_point_value()
+        if self.declarations['sequence']:
+            maximum += self.declaration_values[opponent]['sequence']
+        else:
+            maximum += remaining_cards.get_sequence_value()
+        if self.declarations['set']:
+            maximum += self.declaration_values[opponent]['set']
+        else:
+            maximum += remaining_cards.get_set_value()
+        if sum(self.declaration_values[player].values()) == 0 and \
+                self.deal_scores[player] == 0 and self.tricks_in_round == 12:
+            maximum += 60
+        if self.deal_scores[player] == 0 and self.tricks_in_round < 12:
+            maximum += 30
+        if self.tricks_won[player] < 6:
+            maximum += 10
+        if self.tricks_won[player] == 0:
+            maximum += 40
         return maximum
 
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
-
-    def get_score_strength(self, player):
-        return self.deal_scores[player] / self.get_maximum_possible_score(player) \
-            if self.deal_scores[player] > self.deal_scores[self.get_next_player(player)] else 0
 
     def __repr__(self):
         result = ""
@@ -414,18 +460,17 @@ class DealState:
 
 
 if __name__ == "__main__":
-    players = ['cheat', 'normal']
+    players = ['decisive', 'normal']
     scores = {p: 0 for p in players}
 
     start = time.time()
-    for i in range(1):
+    for i in range(6):
         deal = DealState(players, scores)
         while deal.get_possible_moves():
-            if deal.player_to_play == 'cheat':
-                deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, history=False, cheat=True))
+            if deal.player_to_play == 'decisive':
+                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, decisive=True))
             else:
-                # deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, cheat=False))
-                deal.do_move(deal_kbs(deal))
+                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, decisive=False))
         players = players[::-1]
         print(deal)
     print(time.time()-start)
