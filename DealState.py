@@ -77,18 +77,20 @@ class DealState:
         return state
 
     def clone_and_randomise(self, observer, history, cheat):
-        state = self.clone()
-        state.history = history
-        opponent = self.get_next_player(observer)
+        if cheat:
+            state = self.clone()
+        else:
+            state = self.clone()
+            state.history = history
+            opponent = self.get_next_player(observer)
 
-        impossible_cards = state.hands[observer] + state.discards[observer]
-        impossible_cards += state.played_cards[observer] + state.played_cards[opponent]
-        impossible_cards += [card for _, card in state.current_trick]
+            impossible_cards = state.hands[observer] + state.discards[observer]
+            impossible_cards += state.played_cards[observer] + state.played_cards[opponent]
+            impossible_cards += [card for _, card in state.current_trick]
 
-        possible_cards = [card for card in Deck().cards if card not in impossible_cards]
+            possible_cards = [card for card in Deck().cards if card not in impossible_cards]
 
-        hand_length = len(state.hands[opponent])
-        if not cheat:
+            hand_length = len(state.hands[opponent])
             if state.history:
                 target = state.declaration_values[opponent]
                 definite_cards = state.played_cards[opponent]
@@ -107,13 +109,13 @@ class DealState:
                 state.hands[opponent] = possible_cards[:hand_length]
                 possible_cards = possible_cards[hand_length:]
 
-        if not state.exchanged[observer] or not state.exchanged[opponent]:
-            talon_length = len(state.talon)
-            state.talon = possible_cards[:talon_length]
-            possible_cards = possible_cards[talon_length:]
+            if not state.exchanged[observer] or not state.exchanged[opponent]:
+                talon_length = len(state.talon)
+                state.talon = possible_cards[:talon_length]
+                possible_cards = possible_cards[talon_length:]
 
-        discards_length = len(state.discards[opponent])
-        state.discards[opponent] = possible_cards[:discards_length]
+            discards_length = len(state.discards[opponent])
+            state.discards[opponent] = possible_cards[:discards_length]
 
         return state
 

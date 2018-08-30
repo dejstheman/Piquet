@@ -108,7 +108,7 @@ def create_stats_table(conn, bots, filename):
 
 
 if __name__ == "__main__":
-    games = 8
+    games = 100
     explorations = [[1/sqrt(2), 1/sqrt(2)]]
     db = {'file': 'data/evaluator_stats.db'}
 
@@ -122,10 +122,10 @@ if __name__ == "__main__":
     # bot_names.append(['score_strength_with_history', 'kbs'])
     # bot_names.append(['score_strength_with_history', 'random'])
     # bot_names.append(['kbs', 'random'])
-    # bot_names.append(['absolute_result', 'cheat'])
+    bot_names.append(['absolute_result', 'cheat'])
     # bot_names.append(['absolute_result_with_history', 'cheat'])
-    bot_names.append(['cheat', 'kbs'])
-    bot_names.append(['cheat', 'random'])
+    # bot_names.append(['cheat', 'kbs'])
+    # bot_names.append(['cheat', 'random'])
     histories = []
     # histories.append([False, None])
     # histories.append([False, None])
@@ -136,16 +136,15 @@ if __name__ == "__main__":
     # histories.append([True, None])
     # histories.append([True, None])
     # histories.append([None, None])
-    # histories.append([False, None])
-    # histories.append([True, None])
-    histories.append([None, None])
-    histories.append([None, None])
+    histories.append([False, False])
+    # histories.append([True, False])
+    # histories.append([None, None])
+    # histories.append([None, None])
 
     for e in explorations:
         for i in range(len(bot_names)):
-            # if any(True for x in histories[i] if x is None):
-            #     iter_max = 1000
-            # else:
-            #     iter_max = 500
-            iter_max = 500
+            if any(True for x in histories[i] if x is None):
+                iter_max = 2000
+            else:
+                iter_max = 5000
             evaluate_bots_parallel(bot_names[i], db, games, iter_max, e, histories[i])
