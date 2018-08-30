@@ -19,12 +19,12 @@ def create_sample_games(partie, n):
     return [deepcopy(partie) for _ in range(n)]
 
 
-def evaluate_bots_parallel(bots, db, games, iter_max, explorations, histories):
+def evaluate_bots_parallel(bots, db, games, time_resource, explorations):
     db['table_name'] = '{}_vs_{}_partie_bots'.format(bots[0], bots[1])
     scores = {p: 0 for p in bots}
     partie = create_partie(bots, scores)
     Parallel(n_jobs=multiprocessing.cpu_count())(
-        delayed(bot_partie)(bots, partie, db, iter_max, explorations, histories)
+        delayed(bot_partie)(bots, partie, db, time_resource, explorations)
         for partie in create_sample_games(partie, games))
     conn = create_connection(db['file'])
     with conn:
@@ -32,7 +32,7 @@ def evaluate_bots_parallel(bots, db, games, iter_max, explorations, histories):
         create_stats_table(conn, bots, 'data/get_deal_stats_from_table.txt')
 
 
-def bot_partie(bots, partie, db, iter_max, explorations, histories):
+def bot_partie(bots, partie, db, time_resource, explorations):
     conn = create_connection(db['file'])
     current = deepcopy(partie)
     for deal in current:
@@ -44,21 +44,21 @@ def bot_partie(bots, partie, db, iter_max, explorations, histories):
                 deal.do_move(random.choice(deal.get_possible_moves()))
             elif deal.player_to_play == 'cheat':
                 deal.do_move(deal_ismcts(
-                    root_state=deal, time_resource=iter_max, exploration=e, result_type='absolute_result',
-                    history=histories[deal.players.index(deal.player_to_play)], cheat=True))
+                    root_state=deal, time_resource=time_resource, exploration=e, result_type='absolute_result',
+                    history=False, cheat=True))
             else:
                 deal.do_move(deal_ismcts(
-                    root_state=deal, time_resource=iter_max, exploration=e, result_type=deal.player_to_play,
-                    history=histories[deal.players.index(deal.player_to_play)]))
+                    root_state=deal, time_resource=time_resource, exploration=e, result_type=deal.player_to_play,
+                    history=False))
         scores = deal.deal_scores
-        values = (iter_max, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]],
+        values = (time_resource, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]],
                   deal.repique, deal.pique, deal.cards, deal.capot)
         with conn:
             table_name = db['table_name'].replace('partie', 'deal')
             create_table(conn, table_name, bots, True)
             update_table(conn, table_name, values, True)
     scores = current[0].scores
-    values = (iter_max, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]])
+    values = (time_resource, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]])
     with conn:
         create_table(conn, db['table_name'], bots, False)
         update_table(conn, db['table_name'], values, False)
@@ -73,9 +73,9 @@ def create_connection(db_file):
 
 
 def create_table(conn, table_name, bots, deal):
-    sql = '''create table if not exists {0} (iter_max INTEGER, {1}_exploration REAL, {1} INTEGER, {2}_exploration REAL, 
+    sql = '''create table if not exists {0} (time_resource INTEGER, {1}_exploration REAL, {1} INTEGER, {2}_exploration REAL, 
     {2} INTEGER, repique TEXT, pique TEXT, cards TEXT, capot TEXT);'''.format(table_name, bots[0], bots[1]) \
-        if deal else '''create table if not exists {0} (iter_max INTEGER, {1}_exploration REAL, {1} INTEGER, {2}_exploration REAL, 
+        if deal else '''create table if not exists {0} (time_resource INTEGER, {1}_exploration REAL, {1} INTEGER, {2}_exploration REAL, 
     {2} INTEGER);'''.format(table_name, bots[0], bots[1])
     try:
         cursor = conn.cursor()
@@ -108,43 +108,19 @@ def create_stats_table(conn, bots, filename):
 
 
 if __name__ == "__main__":
-    games = 100
+    games = 250
     explorations = [[1/sqrt(2), 1/sqrt(2)]]
     db = {'file': 'data/evaluator_stats.db'}
+    time_resource = 1
 
     bot_names = []
-    # bot_names.append(['absolute_result', 'kbs'])
-    # bot_names.append(['absolute_result', 'random'])
-    # bot_names.append(['absolute_result', 'absolute_result_with_history'])
-    # bot_names.append(['absolute_result_with_history', 'score_strength_with_history'])
-    # bot_names.append(['absolute_result_with_history', 'kbs'])
-    # bot_names.append(['absolute_result_with_history', 'random'])
-    # bot_names.append(['score_strength_with_history', 'kbs'])
-    # bot_names.append(['score_strength_with_history', 'random'])
-    # bot_names.append(['kbs', 'random'])
-    bot_names.append(['absolute_result', 'cheat'])
-    # bot_names.append(['absolute_result_with_history', 'cheat'])
-    # bot_names.append(['cheat', 'kbs'])
-    # bot_names.append(['cheat', 'random'])
-    histories = []
-    # histories.append([False, None])
-    # histories.append([False, None])
-    # histories.append([False, True])
-    # histories.append([True, True])
-    # histories.append([True, None])
-    # histories.append([True, None])
-    # histories.append([True, None])
-    # histories.append([True, None])
-    # histories.append([None, None])
-    histories.append([False, False])
-    # histories.append([True, False])
-    # histories.append([None, None])
-    # histories.append([None, None])
+    bot_names.append(['kbs', 'random'])
+    bot_names.append(['absolute_result', 'score_strength'])
+    bot_names.append(['score_strength', 'kbs'])
+    bot_names.append(['score_strength', 'random'])
+    bot_names.append(['absolute_result', 'random'])
+    bot_names.append(['absolute_result', 'kbs'])
 
     for e in explorations:
         for i in range(len(bot_names)):
-            if any(True for x in histories[i] if x is None):
-                iter_max = 2000
-            else:
-                iter_max = 5000
-            evaluate_bots_parallel(bot_names[i], db, games, iter_max, e, histories[i])
+            evaluate_bots_parallel(bot_names[i], db, games, time_resource, e)
