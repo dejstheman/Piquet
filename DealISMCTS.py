@@ -1,13 +1,14 @@
 import random
+import time
 from copy import deepcopy
 
 from DealNode import DealNode
 
 
-def deal_ismcts(root_state, iter_max, exploration=None, result_type="absolute_result", history=False, cheat=False):
+def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolute_result", history=False, cheat=False):
     root_node = DealNode() if exploration is None else DealNode(exploration=exploration)
-
-    for i in range(iter_max):
+    timeout = time.time() + time_resource
+    while time.time() < timeout:
         node = root_node
 
         state = root_state.clone_and_randomise(root_state.player_to_play, history, cheat)

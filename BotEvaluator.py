@@ -44,11 +44,11 @@ def bot_partie(bots, partie, db, iter_max, explorations, histories):
                 deal.do_move(random.choice(deal.get_possible_moves()))
             elif deal.player_to_play == 'cheat':
                 deal.do_move(deal_ismcts(
-                    root_state=deal, iter_max=iter_max, exploration=e, result_type='absolute_result',
+                    root_state=deal, time_resource=iter_max, exploration=e, result_type='absolute_result',
                     history=histories[deal.players.index(deal.player_to_play)], cheat=True))
             else:
                 deal.do_move(deal_ismcts(
-                    root_state=deal, iter_max=iter_max, exploration=e, result_type=deal.player_to_play,
+                    root_state=deal, time_resource=iter_max, exploration=e, result_type=deal.player_to_play,
                     history=histories[deal.players.index(deal.player_to_play)]))
         scores = deal.deal_scores
         values = (iter_max, explorations[0], scores[bots[0]], explorations[1], scores[bots[1]],

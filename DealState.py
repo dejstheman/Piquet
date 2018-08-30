@@ -1,3 +1,4 @@
+import csv
 import time
 from copy import deepcopy
 from itertools import combinations
@@ -46,6 +47,15 @@ class DealState:
         self.pique = None
         self.cards = None
         self.capot = None
+        with open('data/score_strengths.csv') as file:
+            reader = csv.reader(file, delimiter=',')
+            next(reader)
+            self.strengths = {}
+            for hand_type, score, strength in reader:
+                if hand_type not in self.strengths:
+                    self.strengths[hand_type] = {int(score): float(strength)}
+                else:
+                    self.strengths[hand_type][int(score)] = float(strength)
 
     def clone(self):
         state = DealState(deepcopy(self.players), deepcopy(self.scores))
@@ -73,6 +83,7 @@ class DealState:
         state.pique = self.pique
         state.cards = self.cards
         state.capot = self.cards
+        state.strengths = self.strengths
 
         return state
 
@@ -378,25 +389,29 @@ class DealState:
             else:
                 return self.hands[self.player_to_play]
 
-    def get_maximum_possible_score(self, player):
-        declaration_values = sum(self.declaration_values[player].values())
-        maximum = 0
-        if self.players.index(player) == 0:
-            maximum += 10 if self.carte_blanche[player] else 0
-            maximum += declaration_values + 135 if maximum + declaration_values >= 30 \
-                else declaration_values + 105
-        else:
-            maximum += declaration_values + 114 if self.carte_blanche[player] \
-                else declaration_values + 104
 
-        return maximum
 
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
 
+    def get_score_stat(self, score, hand_type):
+        if score % 10 != 0:
+            score = ((score//10)+1)*10
+        if score > 150:
+            score = 1000
+        return self.strengths[hand_type][score]
+
     def get_score_strength(self, player):
-        return self.deal_scores[player] / self.get_maximum_possible_score(player) \
-            if self.deal_scores[player] > self.deal_scores[self.get_next_player(player)] else 0
+        score = self.deal_scores[player]
+        hand_type = 'elder' if self.players.index(player) == 0 else 'younger'
+
+        return self.get_score_stat(score, hand_type)
+
+    def get_better_score_strength(self, player):
+        score = self.deal_scores[player]
+        hand_type = 'elder' if self.players.index(player) == 1 else 'younger'
+
+        return self.get_score_stat(score, hand_type)
 
     def __repr__(self):
         result = ""
@@ -414,18 +429,14 @@ class DealState:
 
 
 if __name__ == "__main__":
-    players = ['cheat', 'normal']
+    players = ['better_score_strength', 'score_strength']
     scores = {p: 0 for p in players}
 
     start = time.time()
-    for i in range(1):
+    for i in range(6):
         deal = DealState(players, scores)
         while deal.get_possible_moves():
-            if deal.player_to_play == 'cheat':
-                deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, history=False, cheat=True))
-            else:
-                # deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, cheat=False))
-                deal.do_move(deal_kbs(deal))
-        players = players[::-1]
+            deal.do_move(deal_ismcts(deal, 1, result_type=deal.player_to_play, history=False, cheat=False))
         print(deal)
+        players = players[::-1]
     print(time.time()-start)
