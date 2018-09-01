@@ -139,22 +139,24 @@ if __name__ == "__main__":
         # explorations.append([1/sqrt(2), 0.8])
         # explorations.append([0.5, 0.5])
         db = {'file': 'data/evaluator_stats.db'}
-        time_resource = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        time_resources = [1]
 
         bot_names = []
         # bot_names.append(['kbs', 'random'])
         # bot_names.append(['absolute_result', 'score_strength'])
         # bot_names.append(['kbs', 'score_strength'])
         # bot_names.append(['random', 'score_strength'])
-        bot_names.append(['absolute_result', 'random'])
-        bot_names.append(['absolute_result', 'kbs'])
+        # bot_names.append(['absolute_result', 'random'])
+        # bot_names.append(['absolute_result', 'kbs'])
         # bot_names.append(['random1', 'random2'])
-        # bot_names.append(['absolute_result', 'absolute_result_cheat'])
+        # bot_names.append(['absolute_result', 'absolute_result_history'])
         # bot_names.append(['absolute_result_cheat', 'random'])
         # bot_names.append(['kbs1', 'kbs2'])
         # bot_names.append(['absolute_result1', 'absolute_result2'])
+        bot_names.append(['absolute_result', 'better_score_strength'])
+        bot_names.append(['absolute_result', 'average_score_strength'])
 
         for e in explorations:
             for j in range(len(bot_names)):
-                for time in time_resource:
+                for time in time_resources:
                     evaluate_bots_parallel(bot_names[j], db, games, time, e)

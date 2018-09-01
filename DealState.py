@@ -355,17 +355,10 @@ class DealState:
             return self.get_possible_tricks()
 
     def get_decisive_moves(self):
-<<<<<<< HEAD
-        moves = self.get_possible_moves()
-        if len(moves) > 12:
-            return self.get_possible_moves()
-        else:
-=======
         if len(self.get_possible_moves()) > 12:
             return self.get_possible_moves()
         else:
             moves = self.get_possible_moves()
->>>>>>> temp
             decisive_moves = []
             for m in moves:
                 deal = self.clone()
@@ -373,10 +366,6 @@ class DealState:
                 if deal.deal_scores[deal.player_to_play] > \
                         deal.estimate_opponent_maximum_possible_score(deal.player_to_play):
                     decisive_moves.append(m)
-<<<<<<< HEAD
-=======
-
->>>>>>> temp
             return decisive_moves if decisive_moves else self.get_possible_moves()
 
     def get_possible_no_of_discards(self):
@@ -413,19 +402,11 @@ class DealState:
         opponent = self.get_next_player(player)
         if self.declarations['point']:
             maximum += self.declaration_values[player]['point']
-<<<<<<< HEAD
         else:
             maximum += Hand(self.hands[player]).get_point_value()
         if self.declarations['sequence']:
             maximum += self.declaration_values[player]['sequence']
         else:
-=======
-        else:
-            maximum += Hand(self.hands[player]).get_point_value()
-        if self.declarations['sequence']:
-            maximum += self.declaration_values[player]['sequence']
-        else:
->>>>>>> temp
             maximum += Hand(self.hands[player]).get_sequence_value()
         if self.declarations['set']:
             maximum += self.declaration_values[player]['set']
@@ -473,8 +454,6 @@ class DealState:
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
 
-<<<<<<< HEAD
-=======
     def get_score_stat(self, score, hand_type):
         if score % 10 != 0:
             score = ((score//10)+1)*10
@@ -494,7 +473,13 @@ class DealState:
 
         return self.get_score_stat(score, hand_type)
 
->>>>>>> temp
+    def get_average_score_strength(self, player):
+        score = self.deal_scores[player]
+        hand_type_1 = 'elder' if self.players.index(player) == 0 else 'younger'
+        hand_type_2 = 'elder' if self.players.index(player) == 1 else 'younger'
+
+        return (self.get_score_stat(score, hand_type_1) + self.get_score_stat(score, hand_type_2))/2
+
     def __repr__(self):
         result = ""
         for p in self.players:
@@ -511,29 +496,17 @@ class DealState:
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    players = ['decisive', 'normal']
-=======
     players = ['absolute_result', 'score_strength']
->>>>>>> temp
     scores = {p: 0 for p in players}
 
     start = time.time()
     for i in range(6):
         deal = DealState(players, scores)
         while deal.get_possible_moves():
-<<<<<<< HEAD
-            if deal.player_to_play == 'decisive':
-                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, decisive=True))
-            else:
-                deal.do_move(deal_ismcts(deal, 100, result_type=deal.player_to_play, history=False, decisive=False))
-        players = players[::-1]
-=======
             if deal.player_to_play.endswith('decisive'):
                 deal.do_move(deal_ismcts_decisive(deal, 2, result_type=deal.player_to_play, history=False, cheat=False))
             else:
                 deal.do_move(deal_ismcts(deal, 2, result_type=deal.player_to_play, history=False, cheat=False))
->>>>>>> temp
         print(deal)
         players = players[::-1]
     print(time.time()-start)
