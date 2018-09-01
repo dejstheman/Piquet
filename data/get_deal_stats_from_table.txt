@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS {0}_vs_{1}_deal_bots_stats;
 
 CREATE TABLE {0}_vs_{1}_deal_bots_stats
   (
-     iter_max                  REAL,
+     time_resource                  REAL,
      {0}_exploration           REAL,
      {0}_average               REAL,
      {0}_win_percentage        REAL,
@@ -14,7 +14,7 @@ CREATE TABLE {0}_vs_{1}_deal_bots_stats
   );
 
 INSERT INTO {0}_vs_{1}_deal_bots_stats
-SELECT average.iter_max,
+SELECT average.time_resource,
        average.{0}_exploration,
        {0}_average,
        Ifnull({0}_wins * 100.0 / total_games, 0)       AS {0}_win_percentage,
@@ -25,73 +25,73 @@ SELECT average.iter_max,
        Ifnull({1}_wins * 100.0 / total_games, 0)    AS {1}_win_percentage,
        Ifnull({1}_rubicon * 100.0 / total_games, 0) AS
        {1}_rubicon_percentage
-FROM   (SELECT iter_max,
+FROM   (SELECT time_resource,
                {0}_exploration,
                {1}_exploration,
                Avg({0})    AS {0}_average,
                Avg({1}) AS {1}_average
         FROM   {0}_vs_{1}_deal_bots
-        GROUP  BY iter_max,
+        GROUP  BY time_resource,
                   {0}_exploration,
                   {1}_exploration) AS average
-       LEFT JOIN (SELECT iter_max,
+       LEFT JOIN (SELECT time_resource,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {0}_wins
                   FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} > {1}
-                  GROUP  BY iter_max,
+                  GROUP  BY time_resource,
                             {0}_exploration,
                             {1}_exploration) AS {0}_wins
-              ON average.iter_max = {0}_wins.iter_max
+              ON average.time_resource = {0}_wins.time_resource
                  AND average.{0}_exploration = {0}_wins.{0}_exploration
                  AND average.{1}_exploration = {0}_wins.{1}_exploration
-       LEFT JOIN (SELECT iter_max,
+       LEFT JOIN (SELECT time_resource,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {1}_wins
                   FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} < {1}
-                  GROUP  BY iter_max,
+                  GROUP  BY time_resource,
                             {0}_exploration,
                             {1}_exploration) AS {1}_wins
-              ON average.iter_max = {1}_wins.iter_max
+              ON average.time_resource = {1}_wins.time_resource
                  AND average.{0}_exploration = {1}_wins.{0}_exploration
                  AND average.{1}_exploration = {1}_wins.{1}_exploration
-       LEFT JOIN (SELECT iter_max,
+       LEFT JOIN (SELECT time_resource,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {0}_rubicon
                   FROM   {0}_vs_{1}_deal_bots
                   WHERE  {0} >= 100
-                  GROUP  BY iter_max,
+                  GROUP  BY time_resource,
                             {0}_exploration,
                             {1}_exploration) AS {0}_rubicon
-              ON average.iter_max = {0}_rubicon.iter_max
+              ON average.time_resource = {0}_rubicon.time_resource
                  AND average.{0}_exploration = {0}_rubicon.{0}_exploration
                  AND average.{1}_exploration = {0}_rubicon.{1}_exploration
-       LEFT JOIN (SELECT iter_max,
+       LEFT JOIN (SELECT time_resource,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS {1}_rubicon
                   FROM   {0}_vs_{1}_deal_bots
                   WHERE  {1} >= 100
-                  GROUP  BY iter_max,
+                  GROUP  BY time_resource,
                             {0}_exploration,
                             {1}_exploration) AS {1}_rubicon
-              ON average.iter_max = {1}_rubicon.iter_max
+              ON average.time_resource = {1}_rubicon.time_resource
                  AND average.{0}_exploration = {1}_rubicon.{0}_exploration
                  AND average.{1}_exploration =
                      {1}_rubicon.{1}_exploration
-       LEFT JOIN (SELECT iter_max,
+       LEFT JOIN (SELECT time_resource,
                          {0}_exploration,
                          {1}_exploration,
                          Count(*) AS total_games
                   FROM   {0}_vs_{1}_deal_bots
-                  GROUP  BY iter_max,
+                  GROUP  BY time_resource,
                             {0}_exploration,
                             {1}_exploration) AS total_games
-              ON average.iter_max = total_games.iter_max
+              ON average.time_resource = total_games.time_resource
                  AND average.{0}_exploration = total_games.{0}_exploration
                  AND average.{1}_exploration =
 total_games.{1}_exploration;

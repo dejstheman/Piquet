@@ -10,8 +10,5 @@ from Hand import Hand, get_longest_sub_sequence
 
 
 if __name__ == "__main__":
-    test = [False, None]
-    if any(True for x in test if x is None):
-        print('yes')
-    else:
-        print('no')
+    score = 19
+    print(((score//10)+1)*10)
