@@ -5,7 +5,6 @@ from itertools import combinations
 
 import HandStatistics
 from DealISMCTS import deal_ismcts, deal_ismcts_decisive
-from DealKBS import deal_kbs
 from Deck import Deck
 from Hand import Hand
 

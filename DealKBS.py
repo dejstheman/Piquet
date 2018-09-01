@@ -2,11 +2,11 @@ import HandStatistics
 from Hand import Hand
 
 
-def deal_kbs(state):
+def deal_kbs(state, greedy):
     if any(x for x in state.carte_blanche.values()) and not state.discards[state.player_to_play]:
         return carte_blanche_discard(state)
     elif not state.discards[state.player_to_play]:
-        return default_discard(state)
+        return default_discard(state, greedy)
     elif not state.exchanged[state.player_to_play]:
         exchange_cards(state)
     elif not all(state.declarations.values()):
@@ -49,12 +49,14 @@ def carte_blanche_discard(state):
             return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
 
 
-def default_discard(state):
+def default_discard(state, greedy):
     if not state.no_of_discards[state.player_to_play]:
         return state.max_discards[state.player_to_play]
     else:
         hand = Hand(state.hands[state.player_to_play])
-        return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play])
+        return HandStatistics.compute_greedy_discard(hand, state.max_discards[state.player_to_play]) if greedy else \
+            HandStatistics.compute_discard(
+                hand, state.max_discards[state.player_to_play], state.players.index(state.player_to_play))
 
 
 def exchange_cards(state):
