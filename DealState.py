@@ -354,20 +354,6 @@ class DealState:
         else:
             return self.get_possible_tricks()
 
-    def get_decisive_moves(self):
-        if len(self.get_possible_moves()) > 12:
-            return self.get_possible_moves()
-        else:
-            moves = self.get_possible_moves()
-            decisive_moves = []
-            for m in moves:
-                deal = self.clone()
-                deal.do_move(m)
-                if deal.deal_scores[deal.player_to_play] > \
-                        deal.estimate_opponent_maximum_possible_score(deal.player_to_play):
-                    decisive_moves.append(m)
-            return decisive_moves if decisive_moves else self.get_possible_moves()
-
     def get_possible_no_of_discards(self):
         return range(self.max_discards[self.player_to_play], self.max_discards[self.player_to_play] + 1)
 
@@ -397,60 +383,6 @@ class DealState:
             else:
                 return self.hands[self.player_to_play]
 
-    def get_maximum_possible_score(self, player):
-        maximum = self.deal_scores[player]
-        opponent = self.get_next_player(player)
-        if self.declarations['point']:
-            maximum += self.declaration_values[player]['point']
-        else:
-            maximum += Hand(self.hands[player]).get_point_value()
-        if self.declarations['sequence']:
-            maximum += self.declaration_values[player]['sequence']
-        else:
-            maximum += Hand(self.hands[player]).get_sequence_value()
-        if self.declarations['set']:
-            maximum += self.declaration_values[player]['set']
-        else:
-            maximum += Hand(self.hands[player]).get_set_value()
-        if sum(self.declaration_values[opponent].values()) == 0 and \
-                self.deal_scores[opponent] == 0 and self.tricks_in_round == 12:
-            maximum += 60
-        if self.deal_scores[opponent] == 0 and self.tricks_in_round < 12:
-            maximum += 30
-        if self.tricks_won[opponent] < 6:
-            maximum += 10
-        if self.tricks_won[opponent] == 0:
-            maximum += 40
-
-        return maximum
-
-    def estimate_opponent_maximum_possible_score(self, player):
-        opponent = self.get_next_player(player)
-        remaining_cards = Hand([card for card in Deck().cards if card not in self.hands[player]])
-        maximum = self.deal_scores[opponent]
-        if self.declarations['point']:
-            maximum += self.declaration_values[opponent]['point']
-        else:
-            maximum += remaining_cards.get_point_value()
-        if self.declarations['sequence']:
-            maximum += self.declaration_values[opponent]['sequence']
-        else:
-            maximum += remaining_cards.get_sequence_value()
-        if self.declarations['set']:
-            maximum += self.declaration_values[opponent]['set']
-        else:
-            maximum += remaining_cards.get_set_value()
-        if sum(self.declaration_values[player].values()) == 0 and \
-                self.deal_scores[player] == 0 and self.tricks_in_round == 12:
-            maximum += 60
-        if self.deal_scores[player] == 0 and self.tricks_in_round < 12:
-            maximum += 30
-        if self.tricks_won[player] < 6:
-            maximum += 10
-        if self.tricks_won[player] == 0:
-            maximum += 40
-        return maximum
-
     def get_absolute_result(self, player):
         return 0 if self.deal_scores[player] <= self.deal_scores[self.get_next_player(player)] else 1
 
@@ -466,19 +398,6 @@ class DealState:
         hand_type = 'elder' if self.players.index(player) == 0 else 'younger'
 
         return self.get_score_stat(score, hand_type)
-
-    def get_better_score_strength(self, player):
-        score = self.deal_scores[player]
-        hand_type = 'elder' if self.players.index(player) == 1 else 'younger'
-
-        return self.get_score_stat(score, hand_type)
-
-    def get_average_score_strength(self, player):
-        score = self.deal_scores[player]
-        hand_type_1 = 'elder' if self.players.index(player) == 0 else 'younger'
-        hand_type_2 = 'elder' if self.players.index(player) == 1 else 'younger'
-
-        return (self.get_score_stat(score, hand_type_1) + self.get_score_stat(score, hand_type_2))/2
 
     def __repr__(self):
         result = ""

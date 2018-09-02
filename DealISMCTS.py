@@ -8,7 +8,9 @@ from DealNode import DealNode
 def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolute_result", history=False, cheat=False):
     root_node = DealNode() if exploration is None else DealNode(exploration=exploration)
     timeout = time.time() + time_resource
+    n = 0
     while time.time() < timeout:
+        n += 1
         node = root_node
 
         state = root_state.clone_and_randomise(root_state.player_to_play, history, cheat)
@@ -30,7 +32,8 @@ def deal_ismcts(root_state, time_resource, exploration=None, result_type="absolu
         while node is not None:
             node.update(state, result_type)
             node = node.parent_node
-
+    # with open('data/time_resource_simulations.csv', 'a+') as file:
+    #     file.write('{},{}\n'.format(time_resource, n))
     return max(root_node.child_nodes, key=lambda child: child.visits).move
 
 
