@@ -125,7 +125,7 @@ if __name__ == "__main__":
         explorations = []
         # explorations.append([1/sqrt(2), 1/sqrt(2)])
         # explorations.append([1/sqrt(2), 0.1])
-        explorations.append([1/sqrt(2), 0.5])
+        # explorations.append([1/sqrt(2), 0.5])
         # explorations.append([1/sqrt(2), 1])
         # explorations.append([1/sqrt(2), 2])
         # explorations.append([1/sqrt(2), 2.5])
@@ -133,11 +133,13 @@ if __name__ == "__main__":
         # explorations.append([1/sqrt(2), 7.5])
         # explorations.append([1/sqrt(2), 10])
         # explorations.append([1/sqrt(2), 15])
-        # explorations.append([1/sqrt(2), 20])
+        # explorations.append([1/sqrt(2), 25])
         # explorations.append([1/sqrt(2), 0.6])
         # explorations.append([1/sqrt(2), 0.65])
         # explorations.append([1/sqrt(2), 0.8])
-        # explorations.append([0.5, 0.5])
+        explorations.append([1/sqrt(2), 100])
+        explorations.append([1/sqrt(2), 50])
+        explorations.append([1/sqrt(2), 75])
         db = {'file': 'data/evaluator_stats.db'}
         time_resources = [2]
 
