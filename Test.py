@@ -27,7 +27,7 @@ def create_connection(db_file):
 def create_table(conn):
     points = [0, 4, 5, 6, 7, 8]
     sequences = [0, 3, 4, 15, 16, 17, 18]
-    sets = [0, 13, 14]
+    sets = [0, 3, 14]
     sql = '''create table if not exists all_hands_stats
     (point_score integer, sequence_score integer, set_score integer, frequency integer);'''
     try:

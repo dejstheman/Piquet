@@ -120,7 +120,7 @@ def create_stats_table(conn, bots, filename):
 
 
 if __name__ == "__main__":
-    for i in range(20):
+    for i in range(100):
         games = 8
         explorations = []
         explorations.append([1/sqrt(2), 1/sqrt(2)])
@@ -139,14 +139,14 @@ if __name__ == "__main__":
         # explorations.append([1/sqrt(2), 0.8])
         # explorations.append([0.5, 0.5])
         db = {'file': 'data/evaluator_stats.db'}
-        time_resources = [x/10 for x in range(1, 15)]
+        time_resources = [2]
 
         bot_names = []
         # bot_names.append(['kbs', 'random'])
         # bot_names.append(['absolute_result', 'score_strength'])
         # bot_names.append(['kbs', 'score_strength'])
         # bot_names.append(['random', 'score_strength'])
-        bot_names.append(['absolute_result', 'random'])
+        # bot_names.append(['absolute_result', 'random'])
         # bot_names.append(['absolute_result', 'kbs'])
         # bot_names.append(['random1', 'random2'])
         # bot_names.append(['absolute_result', 'absolute_result_history'])
@@ -155,6 +155,8 @@ if __name__ == "__main__":
         # bot_names.append(['absolute_result1', 'absolute_result2'])
         # bot_names.append(['absolute_result', 'better_score_strength'])
         # bot_names.append(['absolute_result', 'average_score_strength'])
+        bot_names.append(['absolute_result', 'squashed_result'])
+        bot_names.append(['absolute_result', 'squashed_score_strength'])
 
         for e in explorations:
             for j in range(len(bot_names)):
@@ -165,3 +167,4 @@ if __name__ == "__main__":
         # with conn:
         #     for bot in bot_names:
         #         create_stats_table(conn, bot, 'data/get_deal_stats_from_table.txt')
+        #         create_stats_table(conn, bot, 'data/get_partie_stats_from_table.txt')

@@ -37,3 +37,7 @@ class DealNode:
                 self.wins += terminal_state.get_absolute_result(self.player_just_played)
             elif update_type.startswith('score_strength'):
                 self.wins += terminal_state.get_score_strength(self.player_just_played)
+            elif update_type.startswith('squashed_result'):
+                self.wins += terminal_state.get_squashed_result(self.player_just_played)
+            elif update_type.startswith('squashed_score_strength'):
+                self.wins += terminal_state.get_squashed_score_strength(self.player_just_played)

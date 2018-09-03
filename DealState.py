@@ -397,7 +397,22 @@ class DealState:
         score = self.deal_scores[player]
         hand_type = 'elder' if self.players.index(player) == 0 else 'younger'
 
-        return self.get_score_stat(score, hand_type)
+        return self.get_score_stat(score, hand_type) \
+            if self.deal_scores[player] > self.deal_scores[self.get_next_player(player)] else 0
+
+    def get_squashed_result(self, player):
+        if self.players.index(player) == 0:
+            return 0 if self.deal_scores[player] <= 27 or \
+                        self.deal_scores[self.get_next_player(player)] >= self.deal_scores[player] else 1
+        else:
+            return 0 if self.deal_scores[player] <= 13 or \
+                        self.deal_scores[self.get_next_player(player)] >= self.deal_scores[player] else 1
+
+    def get_squashed_score_strength(self, player):
+        if self.players.index(player) == 0:
+            return 0 if self.deal_scores[player] <= 27 else self.get_score_strength(player)
+        else:
+            return 0 if self.deal_scores[player] <= 13 else self.get_score_strength(player)
 
     def __repr__(self):
         result = ""
