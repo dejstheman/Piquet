@@ -120,7 +120,7 @@ def create_stats_table(conn, bots, filename):
 
 
 if __name__ == "__main__":
-    for i in range(32):
+    for i in range(1):
         games = 8
         explorations = []
         explorations.append([1/sqrt(2), 1/sqrt(2)])
@@ -141,33 +141,33 @@ if __name__ == "__main__":
         # explorations.append([1/sqrt(2), 50])
         # explorations.append([1/sqrt(2), 75])
         db = {'file': 'data/evaluator_stats.db'}
-        time_resources = [x/10.0 for x in range(1, 15)]
+        time_resources = [2]
 
         bot_names = []
         bot_names.append(['absolute_result', 'score_strength'])
         bot_names.append(['absolute_result', 'random'])
         bot_names.append(['absolute_result', 'kbs'])
-        # bot_names.append(['absolute_result', 'show_result'])
-        # bot_names.append(['show_result', 'score_strength'])
+        bot_names.append(['absolute_result', 'show_result'])
+        bot_names.append(['show_result', 'score_strength'])
         # bot_names.append(['score_strength', 'kbs'])
         # bot_names.append(['score_strength', 'random'])
         # bot_names.append(['show_result', 'kbs'])
         # bot_names.append(['show_result', 'random'])
-        # bot_names.append(['kbs', 'random'])
-        # bot_names.append(['kbs', 'score_strength'])
-        # bot_names.append(['random', 'score_strength'])
+        bot_names.append(['kbs', 'random'])
+        bot_names.append(['score_strength', 'kbs'])
+        bot_names.append(['random', 'score_strength'])
         # bot_names.append(['absolute_result', 'random'])
         # bot_names.append(['absolute_result', 'kbs'])
         # bot_names.append(['kbs1', 'kbs2'])
         # bot_names.append(['random1', 'random2'])
 
-        for e in explorations:
-            for j in range(len(bot_names)):
-                for time in time_resources:
-                    evaluate_bots_parallel(bot_names[j], db, games, time, e)
+        # for e in explorations:
+        #     for j in range(len(bot_names)):
+        #         for time in time_resources:
+        #             evaluate_bots_parallel(bot_names[j], db, games, time, e)
 
-        # conn = create_connection(db['file'])
-        # with conn:
-        #     for bot in bot_names:
-        #         create_stats_table(conn, bot, 'data/get_deal_stats_from_table.txt')
-        #         create_stats_table(conn, bot, 'data/get_partie_stats_from_table.txt')
+        conn = create_connection(db['file'])
+        with conn:
+            for bot in bot_names:
+                create_stats_table(conn, bot, 'data/get_deal_stats_from_table.txt')
+                create_stats_table(conn, bot, 'data/get_partie_stats_from_table.txt')
