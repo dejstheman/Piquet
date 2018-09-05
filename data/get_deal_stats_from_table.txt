@@ -1,5 +1,9 @@
 DROP TABLE IF EXISTS {0}_vs_{1}_deal_bots_stats;
-CREATE TABLE {0}_vs_{1}_deal_bots_stats ( time_resource REAL, {0}_exploration REAL, {0}_average REAL, {0}_win_percentage REAL, {0}_rubicon_percentage REAL, {0}_repique_percentage REAL, {0}_pique_percentage REAL, {0}_cards_percentage REAL, {0}_capot_percentage REAL, {0}_elder_win_percentage REAL, {0}_younger_win_percentage REAL, {1}_exploration REAL, {1}_average REAL, {1}_win_percentage REAL, {1}_rubicon_percentage REAL, {1}_repique_percentage REAL, {1}_pique_percentage REAL, {1}_cards_percentage REAL, {1}_capot_percentage REAL );
+CREATE TABLE {0}_vs_{1}_deal_bots_stats ( time_resource REAL, {0}_exploration REAL, {0}_average REAL,
+{0}_win_percentage REAL, {0}_rubicon_percentage REAL, {0}_repique_percentage REAL, {0}_pique_percentage REAL,
+{0}_cards_percentage REAL, {0}_capot_percentage REAL, {0}_elder_win_percentage REAL, {0}_younger_win_percentage REAL, {0}_show_percentage REAL,
+ {1}_exploration REAL, {1}_average REAL, {1}_win_percentage REAL, {1}_rubicon_percentage REAL,
+ {1}_repique_percentage REAL, {1}_pique_percentage REAL, {1}_cards_percentage REAL, {1}_capot_percentage REAL, {1}_show_percentage );
 INSERT INTO
 	{0}_vs_{1}_deal_bots_stats
 	SELECT
@@ -14,6 +18,7 @@ INSERT INTO
 		Ifnull({0}_capot * 100.0 / total_games, 0) AS {0}_capot_percentage,
 		Ifnull({0}_elder_win * 100.0 / {0}_elder, 0) AS {0}_elder_win_percentage,
 		Ifnull({0}_younger_win * 100.0 / {0}_younger, 0) AS {0}_younger_win_percentage,
+		Ifnull({0}_show * 100.0 / total_games, 0) AS {0}_show_percentage,
 		average.{1}_exploration,
 		{1}_average,
 		Ifnull({1}_wins * 100.0 / total_games, 0) AS {1}_win_percentage,
@@ -21,7 +26,8 @@ INSERT INTO
 		Ifnull({1}_repique * 100.0 / total_games, 0) AS {1}_repique_percentage,
 		Ifnull({1}_pique * 100.0 / total_games, 0) AS {1}_pique_percentage,
 		Ifnull({1}_cards * 100.0 / total_games, 0) AS {1}_cards_percentage,
-		Ifnull({1}_capot * 100.0 / total_games, 0) AS {1}_capot_percentage
+		Ifnull({1}_capot * 100.0 / total_games, 0) AS {1}_capot_percentage,
+		Ifnull({1}_show * 100.0 / total_games, 0) AS {1}_show_percentage
 	FROM
 		(
 			SELECT
@@ -378,3 +384,43 @@ INSERT INTO
 			ON average.time_resource = {0}_younger.time_resource
 			AND average.{0}_exploration = {0}_younger.{0}_exploration
 			AND average.{1}_exploration = {0}_younger.{1}_exploration
+		LEFT JOIN
+			(
+				SELECT
+					time_resource,
+					{0}_exploration,
+					{1}_exploration,
+					COUNT(*) AS {0}_show
+				FROM
+					{0}_vs_{1}_deal_bots
+				WHERE
+					(elder = '{0}' and {0} >= 28) or (elder = '{1}' and {0} >= 14)
+				GROUP BY
+					time_resource,
+					{0}_exploration,
+					{1}_exploration
+			)
+			AS {0}_show
+			ON average.time_resource = {0}_show.time_resource
+			AND average.{0}_exploration = {0}_show.{0}_exploration
+			AND average.{1}_exploration = {0}_show.{1}_exploration
+		LEFT JOIN
+			(
+				SELECT
+					time_resource,
+					{0}_exploration,
+					{1}_exploration,
+					COUNT(*) AS {1}_show
+				FROM
+					{0}_vs_{1}_deal_bots
+				WHERE
+					(elder = '{1}' and {1} >= 28) or (elder = '{0}' and {1} >= 14)
+				GROUP BY
+					time_resource,
+					{0}_exploration,
+					{1}_exploration
+			)
+			AS {1}_show
+			ON average.time_resource = {1}_show.time_resource
+			AND average.{0}_exploration = {1}_show.{0}_exploration
+			AND average.{1}_exploration = {1}_show.{1}_exploration
